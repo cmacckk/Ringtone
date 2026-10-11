@@ -73,6 +73,12 @@ type Editing = {
   title: string;
   hm: string;
   day: string;
+  /**
+   * 打开编辑框时任务自己的起始日（`day` 会被用户改，这里留着原值）。
+   * 重复任务在别的日子编辑时，`day` 天生就不同于正在看的那天（展开行带的是系列起始日），
+   * 不能拿它当「用户改了日期」——否则一保存视图就跳回系列第一天。
+   */
+  origDay: string;
   rule: RepeatRule | null;
   /** 提前多少秒；`null` = 认不出来，保存时保持库里的原值 */
   advance: number | null;
@@ -130,6 +136,11 @@ export default function App() {
   const [floatOn, setFloatOn] = useState(false);
   /** 输入框：空白处右键「添加任务」要把它聚焦 */
   const composerRef = useRef<HTMLInputElement | null>(null);
+  /**
+   * 输入框里那个「从 <日期>」（新任务的起始日）。`null` = 跟着正在看的这天。
+   * 每次打开输入框 / 添加成功后都清回 `null`，否则上次留下的日期会静默影响下一条任务。
+   */
+  const [addDay, setAddDay] = useState<string | null>(null);
   /**
    * `openComposer` 每次渲染都是一个新函数（里面读的是当时的 `day`）。
    * 跨窗口那个 effect 只挂一次，闭包里会是旧的 `day`，所以从 ref 里拿最新的那个。
@@ -283,7 +294,10 @@ export default function App() {
   }, []);
 
   // 快捷录入的实时预览（只用来显示「识别到什么」；真正落库时在 onAdd 里再算一次）
-  const quick = parseQuick(title, today, day);
+  // 新任务的起始日：界面上的「从 <日期>」选了就用它，没选就跟着正在看的这天
+  const startDay = addDay ?? day;
+  // 快捷录入的实时预览（只用来显示「识别到什么」；真正落库时在 onAdd 里再算一次）
+  const quick = parseQuick(title, today, startDay);
 
   /**
    * 把一句话落库，返回落在哪一天（失败返回 `null`）。
@@ -291,11 +305,15 @@ export default function App() {
    * 「明天九点交周报」→ 日期 / 时刻 / 重复都从这句里认；认不出就全按界面上的值走。
    * 单独抽出来是给「从剪贴板新建」用：那条路径没有输入框，只有一个字符串。
    */
-  async function addFromText(raw: string, hmFallback: string): Promise<string | null> {
+  async function addFromText(
+    raw: string,
+    hmFallback: string,
+    dayFallback: string = day,
+  ): Promise<string | null> {
     const text = raw.trim();
     if (!text) return null;
-    const parsed = parseQuick(text, today, day);
-    const targetDay = parsed.day ?? day;
+    const parsed = parseQuick(text, today, dayFallback);
+    const targetDay = parsed.day ?? dayFallback;
     const targetHm = parsed.hm ?? hmFallback;
     try {
       await createTask({
@@ -315,10 +333,11 @@ export default function App() {
   }
 
   async function onAdd() {
-    const landed = await addFromText(title, hm);
+    const landed = await addFromText(title, hm, startDay);
     if (landed === null) return;
     setTitle("");
     setHm("");
+    setAddDay(null);;
     setRepeat(null);
     setAdvance(0);
     setNotify(null);
@@ -341,6 +360,8 @@ export default function App() {
     backToList();
     if (target && target !== day) setDay(target);
     setEditing(null);
+    // 起始日跟着这次打开的那天走，别把上次留下的日期带过来
+    setAddDay(null);
     setAdding(true);
     // 输入框自带 `autoFocus`，这里再兜一次：从别的面板切回来时焦点可能还在别处
     window.requestAnimationFrame(() => composerRef.current?.focus());
@@ -441,8 +462,11 @@ export default function App() {
         remind_offsets: editing.advance === null ? null : advanceToJson(editing.advance),
         notify_channels: notifyKindsToJson(editing.notify),
       });
+      const moved = editing.day !== editing.origDay;
       setEditing(null);
-      await reload(day);
+      // 起始日改了：跟着跳到那天。不跳的话这条任务从当前列表里消失，看着像被删了
+      if (moved) setDay(editing.day);
+      else await reload(day);
     } catch (e: unknown) {
       setErr(message(e));
     }
@@ -463,6 +487,7 @@ export default function App() {
       title: t.title,
       hm: hmFromMs(t.due_at_ms),
       day: t.day,
+      origDay: t.day,
       rule: parseRepeat(t.repeat_rule),
       advance: parseAdvance(t.remind_offsets),
       notify: parseNotifyKinds(t.notify_channels),
@@ -811,6 +836,11 @@ export default function App() {
                       rule={editing.rule}
                       day={editing.day}
                       onChange={(rule) => setEditing({ ...editing, rule })}
+                      /* 起始日：「从 X 重复到 Y」要连起来读，所以交给 RepeatEditor 排在自己前面 */
+                      from={{
+                        value: editing.day,
+                        onChange: (value) => setEditing({ ...editing, day: value }),
+                      }}
                       extra={
                         <>
                           <AdvanceSelect
@@ -924,7 +954,10 @@ export default function App() {
                   onChange={(e) => setTitle(e.target.value)}
                   onKeyDown={(e) => {
                     if (e.key === "Enter") void onAdd();
-                    if (e.key === "Escape") setAdding(false);
+                    if (e.key === "Escape") {
+                      setAdding(false);
+                      setAddDay(null);
+                    }
                   }}
                 />
                 <input type="time" value={hm} onChange={(e) => setHm(e.target.value)} />
@@ -948,8 +981,10 @@ export default function App() {
               ) : null}
               <RepeatEditor
                 rule={repeat}
-                day={day}
+                day={startDay}
                 onChange={setRepeat}
+                /* 不选就跟着正在看的这天（`startDay` = `addDay ?? day`） */
+                from={{ value: startDay, onChange: (value) => setAddDay(value) }}
                 extra={
                   <>
                     <AdvanceSelect
@@ -1010,3 +1045,5 @@ function taskMenu(
     { label: "删除", onPick: actions.remove, danger: true },
   ];
 }
+
+

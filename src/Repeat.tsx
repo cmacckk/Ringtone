@@ -40,12 +40,18 @@ export default function RepeatEditor({
   rule,
   day,
   onChange,
+  from,
   extra,
 }: {
   rule: RepeatRule | null;
   /** 任务自己的**起始日**：`每月 / 每年` 规则只存频率不存「几号」，跟它放一起才说得清 */
   day: string;
   onChange: (rule: RepeatRule | null) => void;
+  /**
+   * 「从哪天开始」那个日期框（可选）。
+   * 放在「重复到」**前面**，一行读下来就是「从 X 到 Y」；没传就不显示。
+   */
+  from?: { value: string; onChange: (day: string) => void };
   /** 塞在同一个 flex 行里的额外控件（比如「提前提醒」下拉）；一行放不下会自动换行 */
   extra?: ReactNode;
 }) {
@@ -113,14 +119,28 @@ export default function RepeatEditor({
         </div>
       ) : null}
 
+      {from ? (
+        <label className="until" title="从哪天开始（重复任务：系列的第一天）">
+          从
+          <input
+            type="date"
+            value={from.value}
+            onChange={(e) => {
+              // 清空日期框会得到 ""，那不是合法日期，直接忽略
+              if (e.target.value) from.onChange(e.target.value);
+            }}
+          />
+        </label>
+      ) : null}
+
       {rule ? (
         <label className="until">
-          结束
+          重复到
           <input
             type="date"
             value={rule.until ?? ""}
             min={day}
-            title="留空 = 一直重复；填了就含当天"
+            title="跟左边的「从 <日期>」一起就是个区间：从那天到这天，每天都出现在当天的列表里。留空 = 一直重复"
             onChange={(e) => onChange({ ...rule, until: e.target.value || null })}
           />
         </label>

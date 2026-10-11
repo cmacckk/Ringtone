@@ -49,6 +49,12 @@ pub fn run() {
                 })
                 .build(),
         )
+        .plugin(tauri_plugin_autostart::init(
+            tauri_plugin_autostart::MacosLauncher::LaunchAgent,
+            // 开机自启时带上这个参数：登录后起来就缩进托盘，不挡在桌面中间。
+            // 启动参数是写在注册表那一项里的，所以改了这里要重新开关一次自启才生效。
+            Some(vec![MINIMIZED_ARG]),
+        ))
         .setup(|app| {
             let dir = app.path().app_data_dir()?;
             let conn = db::open(&dir.join("ringtone.db"))?;
@@ -94,6 +100,17 @@ pub fn run() {
             // 先把浮窗落点算一次存下来（这时主窗口还没被最小化，显示器信息是准的）
             if let Some(main) = app.get_webview_window("main") {
                 let _ = compute_dock(app.handle(), &main);
+                // 开机自启带过来的 `--minimized`：直接收进托盘（托盘、调度、推送到点照样跑）。
+                // 用 hide 而不是 minimize：最小化在任务栏还留个条，hide 才是真「不出现」。
+                if started_minimized() {
+                    if let Err(e) = main.hide() {
+                        eprintln!("[ringtone] 开机自启没能收进托盘：{e}");
+                    } else {
+                        println!(
+                            "[ringtone] 开机自启：已收进托盘（点托盘图标或快捷键可以随时叫出来）"
+                        );
+                    }
+                }
             }
             // 快捷键：从设置里读，注册失败只警告（不能为了一个快捷键让程序起不来）
             if !saved_hotkey.trim().is_empty() {
@@ -544,6 +561,15 @@ fn sync_float(app: &AppHandle) {
 
 /// 「一键显示浮窗」的快捷键存在 `settings` 表的哪个键下。
 const HOTKEY_KEY: &str = "float.hotkey";
+
+/// 开机自启时附带的启动参数（写进 Windows 注册表那一项）。
+/// 见到它就表示「这次是被开机自启拉起来的」，主窗口起来就收进托盘，不往桌面上弹。
+const MINIMIZED_ARG: &str = "--minimized";
+
+/// 这次启动带没带 `--minimized`（手动双击 exe 时不会带）。
+fn started_minimized() -> bool {
+    std::env::args().any(|a| a == MINIMIZED_ARG)
+}
 
 /// 当前生效的快捷键（进程内记着，换绑时要先把旧的卸掉）。
 static HOTKEY: Mutex<Option<String>> = Mutex::new(None);

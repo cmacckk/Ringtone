@@ -27,6 +27,7 @@ import {
   workStatus,
 } from "./api";
 import { humanSpan } from "./day";
+import { disable, enable, isEnabled } from "@tauri-apps/plugin-autostart";
 import {
   PHOTO_OPACITY_DEFAULT,
   PhotoOpacity,
@@ -102,6 +103,7 @@ export default function Prefs({ onChanged }: { onChanged?: () => void }) {
   const [mouse, setMouse] = useState<MouseButton>("off");
   /** 节假日数据覆盖到哪几年（用来说清「跳过节假日」到底算不算得上） */
   const [holiday, setHoliday] = useState<HolidayInfo | null>(null);
+  const [autostart, setAutostart] = useState(false);
 
   // 初始化：快捷键（含鼠标侧键）、上下班设置、背景图
   useEffect(() => {
@@ -119,6 +121,9 @@ export default function Prefs({ onChanged }: { onChanged?: () => void }) {
         setStatus(st);
         setMouse((mb === "x1" || mb === "x2" ? mb : "off") as MouseButton);
         setHoliday(hd);
+        // 自启状态在系统侧（注册表），不能存 localStorage，只能问一遍
+        const auto = await readAutostart();
+        if (auto !== null) setAutostart(auto);
       } catch (e) {
         setErr(message(e));
       }
@@ -183,7 +188,39 @@ export default function Prefs({ onChanged }: { onChanged?: () => void }) {
     }
   }
 
-  async function saveSchedule(next: WorkSchedule) {    setErr("");
+  async function applyAutostart(on: boolean) {
+    setErr("");
+    setOk("");
+    try {
+      if (on) await enable();
+      else await disable();
+    } catch (e) {
+      // 写注册表失败（极少见）就报错，勾选状态下面按系统实际值重读
+      setErr(message(e));
+    }
+    // 不直接信入参：注册表到底写成什么样，回读一遍才算数
+    const now = await readAutostart();
+    if (now === null) {
+      setErr("改了自启开关，但读不出系统里的状态，请重新打开这个面板确认");
+      return;
+    }
+    setAutostart(now);
+    setOk(
+      now ? "已开启开机自启（下次登录 Windows 就自动起在托盘里）" : "已关闭开机自启",
+    );
+  }
+
+  /** 读系统里的自启状态；读不到返回 `null`（不能拿 `false` 冒充「没开」） */
+  async function readAutostart(): Promise<boolean | null> {
+    try {
+      return await isEnabled();
+    } catch {
+      return null;
+    }
+  }
+
+  async function saveSchedule(next: WorkSchedule) {
+    setErr("");
     setOk("");
     setBusy(true);
     try {
@@ -331,6 +368,28 @@ export default function Prefs({ onChanged }: { onChanged?: () => void }) {
         <div className="hint">
           键盘之外也可以只用鼠标侧键（侧键不用配 Ctrl）。设上之后它在「全局」用来叫浮窗，
           也就是再也不触发浏览器的前进 / 后退了；不想用就选「不用」。
+        </div>
+      </div>
+
+      <div className="card">
+        <div className="card-head">
+          <strong>开机自启</strong>
+          <span className="muted">
+            {autostart ? "已开启：登录后自动起在托盘" : "已关闭"}
+          </span>
+        </div>
+        <label className="row">
+          <input
+            type="checkbox"
+            checked={autostart}
+            disabled={busy}
+            onChange={(e) => void applyAutostart(e.target.checked)}
+          />
+          <span>开机自动启动</span>
+        </label>
+        <div className="hint">
+          打开后登录 Windows 就自动运行，主窗口不往桌面上弹（直接待命在托盘里，浮窗照常贴边），
+          到点提醒照常推送。写的是当前用户那一项注册表（不需要管理员权限）；不想用了取消勾选即可。
         </div>
       </div>
 

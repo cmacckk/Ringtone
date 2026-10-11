@@ -1,0 +1,84 @@
+# M6 打包交付报告：四项缺口 + 首个提交 + NSIS 安装包
+
+> 这一轮做的事：补掉 4 个已知缺口 → 跑完四条检查 → 建首个 git 提交 → 打 Windows 安装包。
+> **推送与 release 上传被本机护栏拦下**（`BLOCKED: Direct push to protected branch`），
+> 这两步是公开/不可逆操作，按项目约定交回你自己执行，命令见第 5 节（已备好脚本）。
+
+## 1. 补掉的四个缺口
+
+| # | 缺口 | 现在的行为 | 实现位置 |
+| --- | --- | --- | --- |
+| 1 | 「工作日」不认中国法定节假日 | 内置 **2026 年国务院安排**（33 个放假日 + 6 个调休补班日）。法定节假日不响；**调休补班的周六日照响**——例如 `2026-02-28` 是周六但要上班，它就是 2 月最后一个工作日 | 新建 `src-tauri/src/holiday.rs`（`is_workday` / `is_makeup_workday` / `covered`），`models::matches_day` 的 `"weekdays"` 分支改走它 |
+| 2 | 每月 31 日的规则遇上没 31 号的月份整月不响 | 做**月末对齐**：31 号在 2 月落 28/29 日、4 月落 30 日；还新增了「每月最后一个工作日 / 每 N 个月的最后一个工作日」 | `models.rs` 新增 `month_target_day()`；`REPEAT_FREQS` 变 6 项（加 `last_workday`）、新增 `last_workday_of_month()` |
+| 3 | 导入 Markdown 会把重复规则和提前提醒丢掉 | 导出的说明写全 `interval` / `until`（`↻ 每 2 周的周一、周三、周五，到 2026-12-31 · 提前 30 分钟`），导入时**反解回来**；两条来回逐字相等（有测试守着）。认不出就不猜、返回空 | `port.rs` 新增 `parse_rule_note()` / `parse_day_names()` / `parse_advance_note()` / `repeat_json()`，`parse_markdown()` 填 `repeat_rule` 与 `remind_offsets` |
+| 4 | 快捷录入只认一部分写法 | 新增 `下下周三`（+14 天）、`10/20`（斜杠日期，**只认斜杠**：`3.5` 这类不会被当成 3 月 5 日）、`每月最后一个工作日` | `src/quick.ts` 的 `parseDay` / `parseRepeat` |
+
+顺带的行为变更：**上下班提醒的重复规则从「每天」改成「工作日」**（`src-tauri/src/work.rs`）——
+以前周末也会响，现在法定节假日不响、调休补班的周六日照响。设置面板的说明文案与 README / CHANGELOG 已同步。
+
+界面上加了数据年份提示：设置 → 通用 → 上下班提醒那张卡会显示「节假日数据：2026」；
+没有当年数据时会写明「今年没有数据，会退化成只看周一到周五」。新命令 `holiday_info`。
+
+## 2. 实测与检查
+
+| 项目 | 结果 |
+| --- | --- |
+| 快捷录入（CDP 真机输入） | `下下周三交材料` → `10-28`；`10/20 交报告` → `10-20`；`每月最后一个工作日 巡检机房` → 规则识别 + 摘要「每月最后一个工作日」+ 新提示「跳过法定节假日与周末」；`每天 9:00 喝水` → `每天 09:00 · 时间已过去，不会提醒`（都正确） |
+| 重复规则下拉 | 7 项：不重复 / 每天 / 工作日 / 每周 / 每月 / **每月最后工作日** / 每年 |
+| `cargo test --lib` | **146 passed / 0 failed**（其中 `last_workday` 断言专门守住「2026-02-28 虽然是周六但补班，所以它是 2 月最后一个工作日」） |
+| `cargo fmt --check` / `cargo check --all-targets` / `cargo clippy --all-targets` | 0 / 0 警告 / 0 警告 |
+| `pnpm exec tsc --noEmit` | 退出码 0 |
+| `pnpm exec vite build` | `index.html 0.39 kB` · `css 21.61 kB` · `js 311.26 kB` |
+
+## 3. 公开前的脱敏（仓库是公开的）
+
+- `src-tauri/src/channel/dingtalk.rs` 的测试常量换成**形状相同的假值**（`SEC` + 64 位十六进制、32 位 token），
+  加签期望值用 `node:crypto` 重算（`ZGXlsEVlEJBlP+Yk2pHscf1jchKOHKP1wNfljhqdqEU=`）——测试仍然真的在验算法。
+- `docs/kitealarm-plan.md` 的飞书 `chat_id`、`docs/M6-advance-report.md` 里两条真实任务标题 → 换成占位符 / 泛称。
+- `.gitignore` 新增 `docs/screenshots/`（40 张截图含真实工作内容，不推仓库）。
+- 提交前全库搜过一遍：真加签密钥、真 webhook token、`chat_id`、app id、单位与人名 **全部为 0 命中**；提交里没有 >1MB 的文件。
+
+## 4. 首个提交与安装包
+
+| 项目 | 值 |
+| --- | --- |
+| 提交 | `7a58846` feat: Ringtone 首个可用版本（本地待办 + 到点推送钉钉/飞书） |
+| 文件数 | 123（`node_modules` / `dist` / `target` / `docs/screenshots` 均已排除） |
+| 安装包 | `src-tauri\target\release\bundle\nsis\Ringtone_0.1.0_x64-setup.exe` |
+| 大小 / SHA256 | 4,877,590 字节（4.65 MiB） / `0b2e8c781dbc97c45374c76e36f4ac87a25f82d528ebc50de75cc566bdcc2f3e` |
+
+> 安装包是**最新那份**：包含 开机自启 与 重复任务的「从 / 重复到」区间
+> （第一版构建于这两项之前，4,850,895 字节 / `c2ac656d…`，已作废，不要上传）。
+> 但**它对应的代码还没提交**（护栏不让我往 `master` 提交）——推代码前先把工作区这堆改动提交掉，
+> 否则 release 里的安装包与仓库源码对不上。
+
+安装包是 NSIS 安装器（Windows 10/11，需要 WebView2；Win11 自带）。**安装包不进 git 仓库**，
+它作为 release 的附件上传（第 5 节）。
+
+## 5. 需要你执行的两步（护栏拦下了，命令可直接复制）
+
+```powershell
+# ① 推送代码（走本机 7897 代理访问 GitHub）
+cd F:\develop\Ringtone
+git remote add origin https://github.com/cmacckk/Ringtone.git
+$env:HTTPS_PROXY="http://127.0.0.1:7897"
+git push -u origin master
+
+# ② 建 release + 上传安装包（需要一把有 repo 权限的 token）
+$env:GH_TOKEN="ghp_你的token"     # 只放当前会话，别写进文件
+.\scripts\publish-release.ps1
+```
+
+`scripts/publish-release.ps1` 会：建 `v0.1.0` 的 release（已存在就复用）→ 上传
+`Ringtone_0.1.0_x64-setup.exe`（同名先删）→ 打印下载链接、大小与 SHA256。
+
+## 6. 已知缺口（本轮没动的）
+
+1. 节假日数据只到 **2026 年**：没有那一年的数据时「工作日」退化成「周一至周五」（宁多响不少响）。
+   国务院安排每年 11 月才公布，届时要手动往 `src-tauri/src/holiday.rs` 加下一年。
+2. 只认国务院安排，**不认地方的额外假期**。
+3. 导入只认自己导出的 Markdown 形状（`- [ ] 09:30 交周报 · ↻ 每周… · 提前 5 分钟`）。
+4. 快捷录入仍不认 `半小时后`、`下周`（不带星期几）、`每两周`、英文写法。
+5. 渠道密钥在本地是**明文**存放（DPAPI 加密你明确说不做），数据库文件在本机 AppData 下。
+6. 钉钉 20 条/分的限流闸门只有单测覆盖，没做真压强测（要连发 21 条真消息）。
+7. 安装包没做代码签名，Windows SmartScreen 首次运行可能提示「未知发布者」。

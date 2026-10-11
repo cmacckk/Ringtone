@@ -98,6 +98,19 @@ if (clickSel) {
   await new Promise((r) => setTimeout(r, 300));
 }
 
+// --pre "表达式"：截图前先跑一段（可以是多步操作，支持 await），跑完继续截图。
+// 例如先把设置面板切到「通用」页签、或者往输入框里填好值再拍。
+const preExpr = opts.get("pre");
+if (preExpr) {
+  const r = await call("Runtime.evaluate", {
+    expression: preExpr,
+    returnByValue: true,
+    awaitPromise: true,
+  });
+  console.log(`PRE → ${JSON.stringify(r.result.value ?? r.result.description)}`);
+  await new Promise((r) => setTimeout(r, 400));
+}
+
 // --dbl "选择器"：双击（进入行内编辑，展示重复规则编辑器）。
 // 用合成事件就够了：React 的 onDoubleClick 监听的就是 dblclick，且事件会冒泡。
 const dblSel = opts.get("dbl");
