@@ -6,6 +6,17 @@
 
 ### Added
 
+#### v0.1.0 已发布到 GitHub Release（含安装包）
+
+- **release 页**：https://github.com/cmacckk/Ringtone/releases/tag/v0.1.0
+  附件 `Ringtone_0.1.0_x64-setup.exe` —— 4,879,709 字节（4.65 MiB），
+  SHA256 `ec860b9606303aa15aa24ecfee0b2bca9913bfbeb5fdd8f8fd508cba26d77156`；
+  下载直链 `HEAD` 实测 302 → 200、`Content-Length: 4879709`。
+- 这份包**与 tag 指向的源码是同一棵树**（`02edd1c` 之后重新打过一次：中间多出来的
+  `RINGTONE_DATA_DIR` 会让旧包与仓库源码对不上）。历史包 4,850,895 / `c2ac656d…` 与
+  4,877,590 / `0b2e8c78…` 均作废。
+- README「安装」一节直接给下载链接；`docs/M6-package-report.md` 记了 release id、tag 指向与核对结果。
+
 #### M6 · README 重做（截图 + 演示数据目录）
 
 - **README 按 [PastePaw](https://github.com/XueshiQiao/PastePaw) 的骨架重写**：居中标题 + 徽章 + emoji 功能清单 +
@@ -257,12 +268,6 @@
 - 幂等保障：`occurrences(task_id, fire_at_ms)` 唯一索引 + `pending → sending` 认领锁，重启或重复 tick 都不会重复通知。
 - 勾选完成会把未到点的实例作废（`skipped`），取消完成会按当前时间重建。
 
-### Fixed
-
-- **`scripts/shot.mjs` 的参数解析会静默吞掉后面的参数**：原来是「按位置两两配对」，`--reload` 这种开关会把
-  紧跟着的 `--name` 当成自己的值，于是 name / eval 读不到且不报错（图默默存成 `dark.png`）。
-  改成：遇到下一个 token 是 `--xxx` 或到头就当开关（值 `"1"`），否则吃掉下一个 token 当值。
-
 ### Changed
 
 - README 结构与文案（见上，`### Added`），并补上「同一个窗口里改 `localStorage` 收不到 `storage` 事件」等
@@ -307,6 +312,13 @@
 
 ### Fixed
 
+- `scripts/publish-release.ps1` 三处会踩的坑：① 原来写死 `target_commitish = "master"`，而远端仓库**没有**
+  `master` 分支（默认分支是 `feat/autostart-range`）→ 新增 `-Target` 参数，留空时自动读仓库的 `default_branch`；
+  ② 脚本存成 UTF-8 **没带 BOM**，Windows PowerShell 5.1 会按 GBK 读、中文串全乱（`pwsh` 7 才不在乎）→ 补 BOM；
+  ③ 这台机器的 5.1 加载不出 `Get-FileHash` → 文档与报告里统一用 `pwsh -File` 跑。
+- **`scripts/shot.mjs` 的参数解析会静默吞掉后面的参数**：原来是「按位置两两配对」，`--reload` 这种开关会把
+  紧跟着的 `--name` 当成自己的值，于是 name / eval 读不到且不报错（图默默存成 `dark.png`）。
+  改成：遇到下一个 token 是 `--xxx` 或到头就当开关（值 `"1"`），否则吃掉下一个 token 当值。
 - **「收进托盘」不弹浮窗**：菜单项从前端 `getCurrentWindow().hide()` 改走 Rust 的 `hide_main`——前端 `hide()`
   不经过 `sync_float`，主窗口藏了浮窗却不顶上（与标题栏 ✕ 行为不一致）。
 - **总览里点「在 X 添加任务」不回列表**：总览 / 设置都是全屏 early-return 分支，不先回列表输入框开了也看不见。

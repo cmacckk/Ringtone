@@ -104,8 +104,11 @@
 
 **安装包（Windows 10 1803+ / Windows 11）**
 
+**[⬇ 下载 Ringtone_0.1.0_x64-setup.exe](https://github.com/cmacckk/Ringtone/releases/download/v0.1.0/Ringtone_0.1.0_x64-setup.exe)** · [releases 页面](https://github.com/cmacckk/Ringtone/releases)
+
 ```text
 Ringtone_0.1.0_x64-setup.exe        4.65 MiB（NSIS，当前用户安装，不需要管理员）
+SHA256  ec860b9606303aa15aa24ecfee0b2bca9913bfbeb5fdd8f8fd508cba26d77156
 ```
 
 - 依赖 **WebView2**：Win11 与较新的 Win10 自带；没有的话装一次微软的 Evergreen Runtime 即可。
