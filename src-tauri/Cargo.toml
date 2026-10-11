@@ -1,0 +1,33 @@
+[package]
+name = "ringtone"
+version = "0.1.0"
+description = "Ringtone - 本地待办 + 到点推送到钉钉/飞书"
+authors = ["Mechrevo"]
+edition = "2021"
+
+[lib]
+name = "ringtone_lib"
+crate-type = ["staticlib", "cdylib", "rlib"]
+
+[build-dependencies]
+tauri-build = { version = "2", features = [] }
+
+[dependencies]
+tauri = { version = "2", features = ["tray-icon", "image-png"] }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+rusqlite = { version = "0.32", features = ["bundled"] }
+chrono = "0.4"
+tauri-plugin-notification = "2"
+# 选文件 / 存文件（导入导出、选背景图）—— 路径必须由用户点出来，不能写死。
+tauri-plugin-dialog = "2"
+# 全局快捷键：不聚焦也能一键叫出浮窗。
+tauri-plugin-global-shortcut = "2"
+# 阻塞式 HTTP：调度线程本身就是 OS 线程，同步调用最直白。
+# 不显式选 rustls：0.13 里该 feature 叫 `rustls`，而且会拉 aws-lc-rs 编 C 代码；
+# 用默认的 default-tls，在 Windows 上就是系统自带的 SChannel，依赖最少。
+reqwest = { version = "0.13", features = ["blocking", "json", "query"] }
+# 钉钉加签：HMAC-SHA256 → base64 → urlencode（官方规定的算法）
+hmac = "0.12"
+sha2 = "0.10"
+base64 = "0.22"

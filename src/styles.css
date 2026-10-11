@@ -1,0 +1,1754 @@
+/* Ringtone 界面样式。
+ *
+ * 视觉语言参照 kite 待办：窄竖窗 + 自绘标题栏 + 顶部「小标签 / 大数字」信息块 +
+ * 一周七天条 + 整块圆角卡片列表。做法上只有两条原则：
+ *   1. 颜色、圆角、间距全部走 CSS 变量，不在组件里写死色值；
+ *   2. 深色是默认，亮色只覆盖变量（`prefers-color-scheme: light`，Windows 跟着系统主题走）。
+ */
+
+:root {
+  color-scheme: dark;
+  --bg: #0e131d;
+  /* 输入框底色比页面更沉一点，看起来才是「凹进去」而不是贴上去 */
+  --bg-soft: #0a0e16;
+  --card: #161e2b;
+  --card-2: #1f2837;
+  --line: rgba(255, 255, 255, 0.09);
+  --text: #e7ecf4;
+  --text-2: #9aa5b6;
+  --text-3: #6b7688;
+  --accent: #4c8dff;
+  --accent-soft: rgba(76, 141, 255, 0.16);
+  --danger: #ff5f56;
+  --danger-soft: rgba(255, 95, 86, 0.14);
+  --ok: #34c759;
+  --ok-soft: rgba(52, 199, 89, 0.13);
+  /* 周条上「这天有安排」的小圆点 */
+  --dot: #ff9f43;
+  --radius: 16px;
+  --radius-sm: 11px;
+  --shadow: 0 1px 2px rgba(0, 0, 0, 0.35);
+  /* ---- 外观（字体 / 字号 / 窗口透明度，见 `src/appearance.ts`） ----
+     这三个由 `<html>` 的行内 style 覆盖，这里写默认值是为了「不跑 JS 也是原样」。
+     `--fs-k` 是字号**倍率**：下面所有 `font-size` 都写成 `calc(Npx * var(--fs-k, 1))`，
+     改它一个数就能整体缩放文字（而间距还是 px，不跟着变大变小）。 */
+  --fs-k: 1;
+  --font-family: system-ui, -apple-system, "Segoe UI", "Microsoft YaHei UI", "PingFang SC",
+    "Hiragino Sans GB", sans-serif;
+  /* `body { opacity }` 用：窗口在 Rust 侧建成了 transparent(true)，所以降低它会真的透出桌面 */
+  --win-opacity: 1;
+}
+
+/* 亮色：手动选了「亮色」，或选了「跟随系统（auto）」而系统是亮色。
+   `color-scheme` 也要跟着换，否则滚动条/原生控件还是深色的。
+   ⚠这套 token 在文件里出现两次（另一处在下面的媒体查询里），改一份就要改另一份。 */
+:root[data-theme="light"] {
+  color-scheme: light;
+  --bg: #f2f4f8;
+  --bg-soft: #ffffff;
+  --card: #ffffff;
+  --card-2: #eef1f6;
+  --line: rgba(16, 24, 40, 0.08);
+  --text: #1b2333;
+  --text-2: #5a6577;
+  --text-3: #8b95a6;
+  --accent: #2f6bff;
+  --accent-soft: rgba(47, 107, 255, 0.12);
+  --danger: #e5483f;
+  --danger-soft: rgba(229, 72, 63, 0.1);
+  --ok: #1a9c46;
+  --ok-soft: rgba(26, 156, 70, 0.12);
+  --shadow: 0 1px 2px rgba(16, 24, 40, 0.06);
+}
+
+/* 只有「跟随系统」时才听系统的（手动选过就不该被系统覆盖掉） */
+@media (prefers-color-scheme: light) {
+  :root[data-theme="auto"] {
+    color-scheme: light;
+    --bg: #f2f4f8;
+    --bg-soft: #ffffff;
+    --card: #ffffff;
+    --card-2: #eef1f6;
+    --line: rgba(16, 24, 40, 0.08);
+    --text: #1b2333;
+    --text-2: #5a6577;
+    --text-3: #8b95a6;
+    --accent: #2f6bff;
+    --accent-soft: rgba(47, 107, 255, 0.12);
+    --danger: #e5483f;
+    --danger-soft: rgba(229, 72, 63, 0.1);
+    --ok: #1a9c46;
+    --ok-soft: rgba(26, 156, 70, 0.12);
+    --shadow: 0 1px 2px rgba(16, 24, 40, 0.06);
+  }
+}
+
+/* ---------- 基础 ---------- */
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+}
+
+body {
+  /* 底色**故意不画在 `body` 上**，画在下面 `.app` 上：按 CSS 规范，根元素
+     `html` 没有背景时会把 `body` 的背景「传播」成画布（canvas）背景，而画布那层
+     **不受 `body { opacity }` 影响**。实测过：底色写在 `body` 上时，把透明度调到 0.02
+     屏幕上是「界面淡到几乎看不见、底下是一片深灰」——那是画布底色，桌面根本没透出来。 */
+  background: transparent;
+  color: var(--text);
+  /* 字体族 / 字号 / 透明度都走 CSS 变量（「外观」面板在 `src/appearance.ts` 里写它们） */
+  font-family: var(--font-family);
+  font-size: calc(14px * var(--fs-k, 1));
+  line-height: 1.5;
+  opacity: var(--win-opacity, 1);
+  -webkit-font-smoothing: antialiased;
+  /* 像个应用而不是网页：界面文字不允许拖出蓝色选区 */
+  user-select: none;
+  overflow: hidden;
+}
+
+/* 浮窗那个窗口要真的透明：圆角外面露的应该是桌面，不是一块深色方块。
+   这个 class 由 `main.tsx` 挂上（不用 `:has()`，少依赖一个新选择器） */
+body.float-mode {
+  background: transparent;
+}
+
+input,
+select,
+textarea,
+button {
+  font: inherit;
+  color: inherit;
+}
+
+/* 输入框里的文字仍然要能选 */
+input,
+textarea {
+  user-select: text;
+}
+
+input[type="text"],
+input[type="password"],
+input[type="time"],
+select {
+  background: var(--bg-soft);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 7px 10px;
+  outline: none;
+  min-width: 0;
+}
+
+input[type="time"] {
+  font-variant-numeric: tabular-nums;
+}
+
+input:focus,
+select:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-soft);
+}
+
+::placeholder {
+  color: var(--text-3);
+}
+
+button {
+  cursor: pointer;
+  border: 0;
+  background: var(--card-2);
+  border-radius: 10px;
+  padding: 7px 12px;
+  transition: background 0.12s, color 0.12s, opacity 0.12s;
+}
+
+button:hover:not(:disabled) {
+  background: var(--card-2);
+  filter: brightness(1.1);
+}
+
+button:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+button.primary {
+  background: var(--accent);
+  color: #fff;
+}
+
+button.primary:hover:not(:disabled) {
+  filter: brightness(1.08);
+}
+
+button.ghost {
+  background: transparent;
+  color: var(--text-2);
+  padding: 6px 9px;
+}
+
+button.ghost:hover:not(:disabled) {
+  background: var(--card-2);
+  color: var(--text);
+  filter: none;
+}
+
+button.mini {
+  padding: 5px 9px;
+  font-size: calc(12px * var(--fs-k, 1));
+  border-radius: 8px;
+}
+
+button.warn {
+  background: var(--danger-soft);
+  color: var(--danger);
+}
+
+.spacer {
+  flex: 1;
+}
+
+.muted {
+  color: var(--text-2);
+  font-size: calc(12px * var(--fs-k, 1));
+}
+
+/* ---------- 外壳 ---------- */
+
+.app {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  overflow: hidden;
+  /* 界面底色（主窗口的「桌面」）画在这里，理由见上面 `body` 那段注释 */
+  background: var(--bg);
+}
+
+.titlebar {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  height: 42px;
+  padding-left: 16px;
+  padding-right: 5px;
+}
+
+.titlebar .brand {
+  font-size: calc(13px * var(--fs-k, 1));
+  color: var(--text-2);
+  letter-spacing: 0.2px;
+}
+
+.win-btn {
+  width: 32px;
+  height: 28px;
+  padding: 0;
+  display: grid;
+  place-items: center;
+  background: transparent;
+  color: var(--text-3);
+  border-radius: 8px;
+}
+
+.win-btn:hover:not(:disabled) {
+  background: var(--card-2);
+  color: var(--text);
+  filter: none;
+}
+
+.win-btn.on {
+  background: var(--accent-soft);
+  color: var(--accent);
+}
+
+.win-btn.close:hover:not(:disabled) {
+  background: var(--danger);
+  color: #fff;
+}
+
+.body {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 0 16px 12px;
+}
+
+/* ---------- 顶部：按钮 + 两个信息块 ---------- */
+
+.hero {
+  flex: 0 0 auto;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  gap: 8px;
+}
+
+.hero-btn {
+  position: relative;
+  width: 94px;
+  padding: 10px 8px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  background: var(--card);
+  color: var(--text-2);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+}
+
+.hero-btn span {
+  font-size: calc(12px * var(--fs-k, 1));
+}
+
+.hero-btn:hover:not(:disabled) {
+  background: var(--card-2);
+  color: var(--text);
+  filter: none;
+}
+
+.badge {
+  position: absolute;
+  top: 7px;
+  right: 7px;
+  min-width: 16px;
+  height: 16px;
+  padding: 0 4px;
+  display: grid;
+  place-items: center;
+  border-radius: 8px;
+  background: var(--danger);
+  color: #fff;
+  font-size: calc(10px * var(--fs-k, 1));
+  font-weight: 600;
+}
+
+.hero-block {
+  min-width: 0;
+  padding: 9px 14px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 1px;
+  background: var(--card);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+}
+
+.hero-label {
+  font-size: calc(11px * var(--fs-k, 1));
+  color: var(--text-3);
+}
+
+.hero-value {
+  font-size: calc(17px * var(--fs-k, 1));
+  font-weight: 600;
+  letter-spacing: 0.2px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.hero-sub {
+  font-size: calc(12px * var(--fs-k, 1));
+  color: var(--text-2);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.hero-block.narrow {
+  width: 88px;
+}
+
+.bar {
+  margin-top: 5px;
+  height: 4px;
+  border-radius: 4px;
+  background: var(--card-2);
+  overflow: hidden;
+}
+
+.bar i {
+  display: block;
+  height: 100%;
+  border-radius: 4px;
+  background: var(--accent);
+  transition: width 0.25s;
+}
+
+/* ---------- 周条 ---------- */
+
+.week {
+  flex: 0 0 auto;
+  display: grid;
+  grid-template-columns: 26px repeat(7, minmax(0, 1fr)) 26px;
+  gap: 2px;
+  padding: 5px;
+  background: var(--card);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+}
+
+.week-arrow {
+  padding: 0;
+  display: grid;
+  place-items: center;
+  background: transparent;
+  color: var(--text-3);
+  border-radius: var(--radius-sm);
+}
+
+.week-arrow:hover:not(:disabled) {
+  background: var(--card-2);
+  color: var(--text);
+  filter: none;
+}
+
+.day {
+  position: relative;
+  padding: 5px 0 6px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  background: transparent;
+  color: var(--text-2);
+  border-radius: var(--radius-sm);
+  font-variant-numeric: tabular-nums;
+}
+
+.day:hover:not(:disabled) {
+  background: var(--card-2);
+  filter: none;
+}
+
+.day .wd {
+  font-size: calc(11px * var(--fs-k, 1));
+}
+
+.day .dd {
+  font-size: calc(13px * var(--fs-k, 1));
+}
+
+.day.today .wd {
+  color: var(--accent);
+}
+
+.day.sel {
+  background: var(--accent-soft);
+  color: var(--text);
+}
+
+.day.sel .dd {
+  font-weight: 600;
+}
+
+.day .mark {
+  position: absolute;
+  top: 5px;
+  right: 6px;
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: var(--dot);
+}
+
+/* ---------- 失败横幅 ---------- */
+
+.alert {
+  flex: 0 0 auto;
+  width: 100%;
+  padding: 9px 12px;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  text-align: left;
+  font-size: calc(12px * var(--fs-k, 1));
+  background: var(--danger-soft);
+  color: var(--danger);
+  border-radius: var(--radius-sm);
+}
+
+.alert:hover:not(:disabled) {
+  background: var(--danger-soft);
+  filter: brightness(1.05);
+}
+
+/* ---------- 任务卡片 ---------- */
+
+.sheet {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  padding: 3px;
+  background: var(--card);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+}
+
+.sheet::-webkit-scrollbar,
+.panel::-webkit-scrollbar,
+.logs::-webkit-scrollbar {
+  width: 8px;
+}
+
+.sheet::-webkit-scrollbar-thumb,
+.panel::-webkit-scrollbar-thumb,
+.logs::-webkit-scrollbar-thumb {
+  background: var(--card-2);
+  border-radius: 4px;
+}
+
+.task {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 11px 9px;
+  border-radius: var(--radius-sm);
+}
+
+.task + .task {
+  border-top: 1px solid var(--line);
+}
+
+.task:hover {
+  background: var(--card-2);
+}
+
+.check {
+  flex: 0 0 auto;
+  width: 21px;
+  height: 21px;
+  padding: 0;
+  display: grid;
+  place-items: center;
+  background: transparent;
+  border: 1.6px solid var(--text-3);
+  border-radius: 50%;
+  color: #fff;
+  transition: background 0.12s, border-color 0.12s;
+}
+
+.check:hover:not(:disabled) {
+  background: var(--accent-soft);
+  border-color: var(--accent);
+  filter: none;
+}
+
+.task.done .check {
+  background: var(--accent);
+  border-color: var(--accent);
+}
+
+.task-main {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.title {
+  font-size: calc(15px * var(--fs-k, 1));
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.task.done .title {
+  color: var(--text-3);
+  text-decoration: line-through;
+}
+
+.meta {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 4px;
+  font-size: calc(11px * var(--fs-k, 1));
+  color: var(--text-3);
+}
+
+/* 行内小标签（重复规则、提前提醒）：比正文小一档，别抢标题的注意力 */
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  padding: 1px 6px;
+  border-radius: 999px;
+  background: var(--card-2);
+  color: var(--text-2);
+  font-size: calc(11px * var(--fs-k, 1));
+  white-space: nowrap;
+}
+
+.due {
+  flex: 0 0 auto;
+  font-size: calc(13px * var(--fs-k, 1));
+  color: var(--text-2);
+  font-variant-numeric: tabular-nums;
+}
+
+.task.done .due {
+  color: var(--text-3);
+}
+
+/* 行内按钮平时隐身，鼠标移到这一行才出现（界面才干净） */
+.row-action {
+  opacity: 0;
+  padding: 4px 6px;
+  font-size: calc(12px * var(--fs-k, 1));
+  background: transparent;
+  color: var(--text-3);
+  border-radius: 7px;
+}
+
+.task:hover .row-action,
+.row-action:focus-visible {
+  opacity: 1;
+}
+
+.row-action:hover:not(:disabled) {
+  background: var(--danger-soft);
+  color: var(--danger);
+  filter: none;
+}
+
+/* 编辑态：从「单行」改成「一列」——多了重复规则那一行 */
+.edit {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+}
+
+.edit-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+
+.edit-title {
+  flex: 1;
+  min-width: 0;
+}
+
+/* ---------- 添加任务 ---------- */
+
+.add-row {
+  margin: 5px;
+  padding: 11px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  font-size: calc(13px * var(--fs-k, 1));
+  background: var(--card-2);
+  color: var(--text-2);
+  border-radius: var(--radius-sm);
+}
+
+.add-row:hover:not(:disabled) {
+  color: var(--text);
+  filter: brightness(1.06);
+}
+
+.composer {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  padding: 9px;
+}
+
+.composer-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+
+.composer input[type="text"] {
+  flex: 1;
+  min-width: 0;
+}
+
+/* 快捷录入的「识别到：明天 09:00 · 标题「交周报」」提示行 */
+.quick-hint {
+  font-size: calc(12px * var(--fs-k, 1));
+  color: var(--muted);
+  padding-left: 2px;
+}
+
+.empty {
+  padding: 22px 0;
+  text-align: center;
+  font-size: calc(12px * var(--fs-k, 1));
+  color: var(--text-3);
+}
+
+.foot {
+  flex: 0 0 auto;
+  text-align: center;
+  font-size: calc(11px * var(--fs-k, 1));
+  color: var(--text-3);
+}
+
+/* ---------- 推送设置面板 ---------- */
+
+.panel {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 2px 16px 14px;
+}
+
+.panel-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.panel-head strong {
+  font-size: calc(15px * var(--fs-k, 1));
+}
+
+.hint {
+  padding: 11px 13px;
+  font-size: calc(12px * var(--fs-k, 1));
+  line-height: 1.6;
+  color: var(--text-2);
+  background: var(--card);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+}
+
+.card {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 13px;
+  background: var(--card);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+}
+
+.card-head {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.card-head strong {
+  font-size: calc(14px * var(--fs-k, 1));
+}
+
+.card-head .muted {
+  font-size: calc(11px * var(--fs-k, 1));
+}
+
+.form {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 9px 10px;
+}
+
+.form label {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: calc(11px * var(--fs-k, 1));
+  color: var(--text-3);
+}
+
+.form label.wide {
+  grid-column: 1 / -1;
+}
+
+.row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.error,
+.ok {
+  padding: 9px 12px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: calc(12px * var(--fs-k, 1));
+  border-radius: var(--radius-sm);
+}
+
+.error {
+  background: var(--danger-soft);
+  color: var(--danger);
+}
+
+.ok {
+  background: var(--ok-soft);
+  color: var(--ok);
+}
+
+/* 「知道了」推到最右边 */
+.panel .error button {
+  margin-left: auto;
+}
+
+.logs {
+  display: flex;
+  flex-direction: column;
+  max-height: 280px;
+  overflow-y: auto;
+}
+
+.log {
+  padding: 7px 0;
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  font-size: calc(12px * var(--fs-k, 1));
+  border-top: 1px solid var(--line);
+}
+
+.log:first-child {
+  border-top: 0;
+}
+
+.log .when,
+.log .chan,
+.log .http,
+.log .tag {
+  flex: 0 0 auto;
+}
+
+.log .when {
+  color: var(--text-3);
+  font-variant-numeric: tabular-nums;
+}
+
+.log .chan {
+  color: var(--text-2);
+}
+
+.log .http {
+  color: var(--text-3);
+}
+
+.log .detail {
+  flex: 1;
+  min-width: 0;
+  color: var(--text-2);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.tag {
+  padding: 1px 7px;
+  font-size: calc(11px * var(--fs-k, 1));
+  background: var(--card-2);
+  color: var(--text-2);
+  border-radius: 999px;
+}
+
+.tag.sent,
+.tag.late_sent,
+.tag.test_sent {
+  background: var(--ok-soft);
+  color: var(--ok);
+}
+
+.tag.failed,
+.tag.test_failed {
+  background: var(--danger-soft);
+  color: var(--danger);
+}
+
+.tag.skipped,
+.tag.missed {
+  color: var(--text-3);
+}
+
+/* ---------- 重复规则编辑器（列表中双击标题展开 / 添加任务时也在用） ---------- */
+
+.repeat {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+  font-size: calc(12px * var(--fs-k, 1));
+  color: var(--text-2);
+}
+
+.repeat select {
+  max-width: 132px;
+}
+
+.repeat .interval,
+.repeat .until {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  white-space: nowrap;
+}
+
+.repeat .interval input {
+  width: 46px;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+}
+
+.repeat .until input {
+  width: 134px;
+}
+
+/* 「每周」的星期小方块：选中的是实心蓝 */
+.byday {
+  display: flex;
+  gap: 3px;
+}
+
+button.wd {
+  width: 22px;
+  height: 22px;
+  padding: 0;
+  border-radius: 6px;
+  background: var(--card-2);
+  color: var(--text-2);
+  font-size: calc(11px * var(--fs-k, 1));
+  display: grid;
+  place-items: center;
+}
+
+button.wd.on {
+  background: var(--accent);
+  color: #fff;
+}
+
+.edit-hint {
+  font-size: calc(11px * var(--fs-k, 1));
+  color: var(--text-3);
+}
+
+/* ── 提醒渠道选择（「通知：钉钉 / 飞书」开关组）── */
+.notify {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+  font-size: calc(12px * var(--fs-k, 1));
+}
+
+.notify-label {
+  color: var(--text-3);
+}
+
+button.kind {
+  border: 0;
+  height: 22px;
+  padding: 0 9px;
+  border-radius: 6px;
+  background: var(--card-2);
+  color: var(--text-2);
+  font-size: calc(11px * var(--fs-k, 1));
+}
+
+button.kind.on {
+  background: var(--accent);
+  color: #fff;
+}
+
+.notify-hint {
+  color: var(--text-3);
+  font-size: calc(11px * var(--fs-k, 1));
+}
+
+/* ── 筛选（全部 / 未完成 / 已完成）── */
+.filters {
+  align-self: center;
+  display: inline-flex;
+  gap: 3px;
+  padding: 3px;
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: 999px;
+}
+
+.filters button {
+  border: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 12px;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--text-2);
+  font-size: calc(12px * var(--fs-k, 1));
+}
+
+.filters button:hover {
+  color: var(--text);
+}
+
+.filters button.on {
+  background: var(--accent);
+  color: #fff;
+}
+
+/* 条数角标：只在「未完成 / 已完成」上出现，选中时也跟着变淡 */
+.filters .n {
+  font-size: calc(11px * var(--fs-k, 1));
+  opacity: 0.7;
+}
+
+/* ── 右下角计数（页脚右侧）── */
+.foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.foot-hint {
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.foot-count {
+  flex: 0 0 auto;
+  white-space: nowrap;
+  color: var(--text-2);
+}
+
+/* ── 待办浮窗（第二个窗口，label="float"）──
+   窗口本身没有装饰、背景透明，所以「卡片」就是整张脸；
+   收起时窗口只留一条翻在屏幕外面，露出来的那条边（朝向屏幕内部的那条）
+   给一点强调色，否则用户在桌面上找不到它。 */
+.float {
+  height: 100%;
+  background: transparent;
+  overflow: hidden;
+}
+
+.float-card {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  padding: 10px 12px 9px;
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.4);
+  cursor: pointer;
+}
+
+.float[data-side="right"] .float-card {
+  border-left: 3px solid var(--accent);
+}
+
+.float[data-side="left"] .float-card {
+  border-right: 3px solid var(--accent);
+}
+
+.float-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 6px;
+}
+
+.float-title {
+  font-size: calc(12px * var(--fs-k, 1));
+  color: var(--text-2);
+}
+
+.float-count {
+  font-size: calc(11px * var(--fs-k, 1));
+  color: var(--text-3);
+}
+
+.float-count b {
+  font-size: calc(15px * var(--fs-k, 1));
+  color: var(--text);
+}
+
+.float-list {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin: 8px 0 6px;
+}
+
+.float-list::-webkit-scrollbar {
+  width: 6px;
+}
+
+.float-list::-webkit-scrollbar-thumb {
+  background: var(--card-2);
+  border-radius: 3px;
+}
+
+.float-item {
+  display: flex;
+  /* center 而不是 baseline：左边是方的小勾选框，baseline 对齐会歪 */
+  align-items: center;
+  gap: 6px;
+  font-size: calc(12px * var(--fs-k, 1));
+}
+
+.float-item .t {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.float-item .hm {
+  flex: 0 0 auto;
+  font-size: calc(11px * var(--fs-k, 1));
+  color: var(--text-3);
+}
+
+/* 浮窗里的小勾选框：点一下就勾上 / 取消（事件已在 Float.tsx 里 stopPropagation，
+   否则会先被卡片当成「按住要拖」、再被当成「点一下打开主窗口」） */
+button.float-check {
+  flex: 0 0 auto;
+  width: 15px;
+  height: 15px;
+  padding: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1.5px solid var(--text-3);
+  border-radius: 50%;
+  background: transparent;
+  color: #fff;
+  cursor: pointer;
+}
+
+button.float-check:hover {
+  border-color: var(--accent);
+}
+
+button.float-check.on {
+  background: var(--accent);
+  border-color: var(--accent);
+}
+
+.float-item.done .t {
+  color: var(--text-3);
+  text-decoration: line-through;
+}
+
+.float-empty {
+  padding: 16px 0;
+  text-align: center;
+  font-size: calc(12px * var(--fs-k, 1));
+  color: var(--text-3);
+}
+
+.float-foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+  font-size: calc(11px * var(--fs-k, 1));
+  color: var(--text-3);
+}
+
+/* ---------- M6：外观面板（字体 / 字号 / 窗口透明度） ---------- */
+
+/* 浮窗整块都是拖动区（`data-tauri-drag-region`）：拖走以后自己吸附到最近的那条边 */
+.float-card {
+  cursor: grab;
+}
+
+.float-card:active {
+  cursor: grabbing;
+}
+
+/* 字号 / 透明度用的滑杆。Chromium 支持 `accent-color`，一行就够，不用自己画轨道 */
+input.slider {
+  flex: 0 0 auto;
+  width: 150px;
+  accent-color: var(--accent);
+}
+
+.appearance-name {
+  width: 56px;
+  font-size: calc(12px * var(--fs-k, 1));
+  color: var(--text-2);
+}
+
+.appearance-value {
+  min-width: 40px;
+  text-align: right;
+  font-size: calc(12px * var(--fs-k, 1));
+  color: var(--text-3);
+  font-variant-numeric: tabular-nums;
+}
+
+/* 字体预览：用当前字体写一行字，选完立刻看得出换没换 */
+.appearance-sample {
+  padding: 10px 12px;
+  border-radius: var(--radius-sm);
+  background: var(--card-2);
+  font-size: calc(13px * var(--fs-k, 1));
+}
+
+/* ---------- 月总览（Overview.tsx）---------- */
+
+/* 「今日进度」那块是个按钮：把浏览器的默认按钮皮肤洗掉，看着还是原来的卡片 */
+button.hero-block.tap {
+  text-align: left;
+  cursor: pointer;
+}
+
+button.hero-block.tap:hover:not(:disabled) {
+  background: var(--card-2);
+  filter: none;
+}
+
+.month-nav {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.month-nav strong {
+  font-size: calc(15px * var(--fs-k, 1));
+}
+
+.month-stats {
+  margin-top: 12px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 14px;
+  font-size: calc(12px * var(--fs-k, 1));
+  color: var(--text-2);
+}
+
+.month-stats b {
+  font-size: calc(15px * var(--fs-k, 1));
+  color: var(--text);
+}
+
+.month-stats .mdone {
+  color: var(--ok);
+}
+
+.month-stats .mtodo {
+  color: var(--accent);
+}
+
+.month-head,
+.month {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 4px;
+}
+
+.month-head {
+  margin-top: 14px;
+  font-size: calc(11px * var(--fs-k, 1));
+  color: var(--text-3);
+  text-align: center;
+}
+
+.month {
+  margin-top: 4px;
+}
+
+button.md {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 1px;
+  min-height: 46px;
+  padding: 5px 2px;
+  background: var(--card-2);
+  color: var(--text-2);
+  border-radius: 9px;
+  font-variant-numeric: tabular-nums;
+}
+
+/* 上个月末尾 / 下个月开头的补白：只留个数字，不要看着像有任务 */
+button.md.other {
+  background: transparent;
+  color: var(--text-3);
+}
+
+button.md:hover:not(:disabled) {
+  background: var(--card-2);
+  filter: brightness(1.15);
+  color: var(--text);
+}
+
+/* 那天还有没干完的（蓝）/ 都干完了（绿） */
+button.md.open {
+  background: var(--accent-soft);
+  color: var(--text);
+}
+
+button.md.all {
+  background: var(--ok-soft);
+  color: var(--ok);
+}
+
+button.md.today {
+  box-shadow: inset 0 0 0 1.5px var(--accent);
+}
+
+button.md.sel {
+  box-shadow: inset 0 0 0 2px var(--accent);
+  background: var(--accent-soft);
+  color: var(--text);
+}
+
+.md-num {
+  font-size: calc(13px * var(--fs-k, 1));
+  font-weight: 600;
+}
+
+.md-badge {
+  font-size: calc(10px * var(--fs-k, 1));
+  color: var(--accent);
+}
+
+button.md.all .md-badge {
+  color: var(--ok);
+}
+
+/* 总览里点某一天 → 就地列出那天的任务 */
+.day-list {
+  display: flex;
+  flex-direction: column;
+}
+
+.day-task {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 2px;
+  border-top: 1px solid var(--line);
+  font-size: calc(13px * var(--fs-k, 1));
+}
+
+.day-task:first-child {
+  border-top: 0;
+}
+
+.day-task.done .dt-title {
+  color: var(--text-3);
+  text-decoration: line-through;
+}
+
+.dt-time {
+  flex: 0 0 auto;
+  min-width: 42px;
+  color: var(--text-3);
+  font-variant-numeric: tabular-nums;
+}
+
+.dt-title {
+  min-width: 0;
+  flex: 1;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.dt-state {
+  flex: 0 0 auto;
+  font-size: calc(11px * var(--fs-k, 1));
+  color: var(--accent);
+}
+
+.dt-state.done {
+  color: var(--ok);
+}
+
+/* ============================================================
+   M6：通用设置（快捷键 / 导入导出 / 上下班 / 背景图）
+   ============================================================ */
+
+/* 设置面板的两个页签：推送渠道（配完就不动）与通用（会反复调） */
+.tabs {
+  display: flex;
+  gap: 6px;
+  margin: 10px 0 4px;
+}
+
+.tabs button {
+  padding: 6px 14px;
+  border: 1px solid transparent;
+  border-radius: var(--radius-sm);
+  background: var(--card-2);
+  color: var(--text-2);
+  font-size: calc(12px * var(--fs-k, 1));
+}
+
+.tabs button.on {
+  background: var(--accent-soft);
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+/* 快捷键录制框：等宽字体，免得 Ctrl+Alt+F 里的 1/l 分不清 */
+.hotkey-box {
+  flex: 1 1 auto;
+  min-width: 0;
+  padding: 8px 11px;
+  border-radius: var(--radius-sm);
+  background: var(--card-2);
+  font-family: ui-monospace, Consolas, "Courier New", monospace;
+  font-size: calc(13px * var(--fs-k, 1));
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* 成功提示（`.error` 是红的，这个是绿的；两边结构一样） */
+.ok-line {
+  margin: 8px 0;
+  padding: 9px 12px;
+  border-radius: var(--radius-sm);
+  background: var(--ok-soft);
+  color: var(--ok);
+  font-size: calc(12px * var(--fs-k, 1));
+  line-height: 1.5;
+  word-break: break-all;
+}
+
+.fail-list {
+  margin: 6px 0 0 16px;
+  padding: 0;
+}
+
+.fail-list li {
+  font-size: calc(11px * var(--fs-k, 1));
+  color: var(--text-3);
+}
+
+/* 背景图那一行：左边缩略图、右边按钮和浓度 */
+.photo-row {
+  display: flex;
+  gap: 11px;
+  align-items: flex-start;
+  padding: 8px 0;
+}
+
+.photo-thumb {
+  flex: 0 0 auto;
+  width: 78px;
+  height: 56px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-sm);
+  background: var(--card-2) center / cover no-repeat;
+  font-size: calc(11px * var(--fs-k, 1));
+  color: var(--text-3);
+}
+
+.photo-side {
+  flex: 1 1 auto;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+/* 上下班倒计时条（主界面周条下面） */
+.work-bar {
+  flex: 0 0 auto;
+  width: 100%;
+  margin: 8px 0 0;
+  padding: 8px 12px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  border: 1px solid transparent;
+  border-radius: var(--radius-sm);
+  background: var(--card);
+  color: var(--text-2);
+  font-size: calc(12px * var(--fs-k, 1));
+}
+
+.work-bar:hover {
+  color: var(--text);
+  border-color: var(--line);
+}
+
+/* ============================================================
+   背景图：铺一层的做法 + 有图时把卡片调成半透明
+   ============================================================ */
+
+/*
+ * `.backdrop` 必须是「最近定位祖先」的直接子元素：主窗口放 `.app` 里（`.app` 有
+ * `overflow: hidden`，正好把图裁在窗口内），浮窗放 `.float-card` 里（窗口本身是透明的，
+ * 图铺到卡片外会糊在桌面上）。
+ * `pointer-events: none` 很关键：不然这一层会把点击全吃掉（浮窗就没法拖、没法勾）。
+ */
+.backdrop {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  border-radius: inherit;
+  background-position: center;
+  background-size: cover;
+  background-repeat: no-repeat;
+  pointer-events: none;
+}
+
+.app {
+  position: relative;
+}
+
+/* 背景层之上的内容：只抬直接子元素（`.app` 里的 TitleBar / `.body` / `.panel`） */
+.app > *:not(.backdrop) {
+  position: relative;
+  z-index: 1;
+}
+
+.float-card {
+  position: relative;
+  overflow: hidden;
+}
+
+.float-card > *:not(.backdrop) {
+  position: relative;
+  z-index: 1;
+}
+
+/*
+ * 有背景图时把「卡片类」的颜色换成半透明版。
+ * 变量改名而不是逐条改选择器：卡片、面板、周条、输入框全都吃这几个 token，
+ * 一条覆盖就能一起变透，也不会漏掉某个容器。
+ */
+body.has-photo {
+  --card: rgba(22, 30, 43, 0.72);
+  --card-2: rgba(31, 40, 55, 0.66);
+  --bg: rgba(10, 14, 22, 0.5);
+  --bg-soft: rgba(10, 14, 22, 0.42);
+  --line: rgba(255, 255, 255, 0.14);
+}
+
+:root[data-theme="light"] body.has-photo {
+  --card: rgba(255, 255, 255, 0.78);
+  --card-2: rgba(238, 241, 246, 0.72);
+  --bg: rgba(242, 244, 248, 0.5);
+  --bg-soft: rgba(255, 255, 255, 0.62);
+  --line: rgba(16, 24, 40, 0.12);
+}
+
+/* ============================================================
+   M6：右键菜单 + 任务配色 / 重点 / 紧急
+   ============================================================ */
+
+/* 右键菜单：固定定位在鼠标位置（坐标由 ContextMenu.tsx 算好并夹进窗口内）。
+   选择器写两遍是故意的：`.app > :not(.backdrop)` 那条（给面板用的）算两个类，
+   比单个 `.ctx-menu` 优先级高，会把菜单按成 `position: relative; z-index: 1`，
+   菜单就变成一个整宽方块被挤到列表下面、看不见了。 */
+.ctx-menu.ctx-menu {
+  position: fixed;
+  z-index: 60;
+  min-width: 168px;
+  padding: 5px;
+  display: flex;
+  flex-direction: column;
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  box-shadow: 0 10px 26px rgba(0, 0, 0, 0.32);
+  /* 菜单里不要能选中文字：右键弹出的东西一点就点出选区很脏 */
+  user-select: none;
+}
+
+button.ctx-item {
+  display: block;
+  width: 100%;
+  padding: 7px 9px;
+  text-align: left;
+  font-size: calc(12.5px * var(--fs-k, 1));
+  color: var(--text);
+  background: transparent;
+  border: 0;
+  border-radius: 8px;
+  filter: none;
+}
+
+button.ctx-item:hover:not(:disabled) {
+  background: var(--accent-soft);
+  filter: none;
+}
+
+button.ctx-item.sep {
+  margin-top: 5px;
+  border-top: 1px solid var(--line);
+  border-top-left-radius: 0;
+  border-top-right-radius: 0;
+  padding-top: 9px;
+}
+
+button.ctx-item.danger {
+  color: var(--danger);
+}
+
+button.ctx-item.danger:hover {
+  background: var(--danger-soft);
+}
+
+button.ctx-item:disabled {
+  color: var(--text-3);
+}
+
+/* 任务行：颜色细条要靠绝对定位，所以行本身要 `relative` */
+.task {
+  position: relative;
+}
+
+/* 任务行的颜色细条。
+   类名别叫 .bar——上面 hero 的进度条已经占了 .bar（带 height: 4px），
+   同名会让细条被压成 4 像素高。 */
+.task .tbar {
+  position: absolute;
+  left: 1px;
+  top: 9px;
+  bottom: 9px;
+  width: 3px;
+  border-radius: 2px;
+  /* 颜色只是标记，不要太跳：给一点点透明 */
+  opacity: 0.85;
+}
+
+/* 有细条时左边多留一点，别压到勾选框 */
+.task.colored {
+  padding-left: 12px;
+}
+
+/* 「重点」：加粗 + 更粗的条；不换颜色（颜色已经用来区分任务了） */
+.task.starred .title {
+  font-weight: 600;
+}
+
+.task.starred .tbar {
+  width: 4px;
+}
+
+.task.starred.colored {
+  background: color-mix(in srgb, var(--accent) 7%, transparent);
+}
+
+.task.starred.colored:hover {
+  background: color-mix(in srgb, var(--accent) 12%, transparent);
+}
+
+/* 时间维度的强调：快到点用暖色、已过期用危险色（只动时间文字 + 小圆点，不动整行） */
+.task.soon .due {
+  color: var(--dot);
+}
+
+.task.overdue .due {
+  color: var(--danger);
+}
+
+.task.soon .title::after,
+.task.overdue .title::after {
+  content: "";
+  display: inline-block;
+  width: 5px;
+  height: 5px;
+  margin-left: 6px;
+  vertical-align: 2px;
+  border-radius: 50%;
+  background: currentColor;
+  opacity: 0.75;
+}
+
+.task.soon .title::after {
+  color: var(--dot);
+}
+
+.task.overdue .title::after {
+  color: var(--danger);
+}
+
+/* 行上的星标按钮：不标的时候很淡，鼠标移到这一行才明显 */
+button.star-btn {
+  flex: 0 0 auto;
+  padding: 3px;
+  display: inline-flex;
+  align-items: center;
+  background: transparent;
+  border: 0;
+  border-radius: 7px;
+  color: var(--text-3);
+  filter: none;
+  opacity: 0.55;
+}
+
+.task:hover button.star-btn {
+  opacity: 1;
+}
+
+button.star-btn.on {
+  color: var(--dot);
+  opacity: 1;
+}
+
+button.star-btn:hover:not(:disabled) {
+  background: var(--card-2);
+  color: var(--dot);
+  filter: none;
+}
+
+/* 浮窗条目：小圆点标记颜色，星标加粗 */
+.float-item {
+  cursor: default;
+}
+
+.float-item .dot {
+  flex: 0 0 auto;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  /* 已完成的条目根本不渲染这个点（少一个元素反而让文字对齐），所以这里不用管透明的情况 */
+}
+
+.float-item.starred .t {
+  font-weight: 600;
+}
+
+.float-item svg {
+  flex: 0 0 auto;
+  color: var(--dot);
+}

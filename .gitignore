@@ -1,0 +1,23 @@
+# --- node / 前端 ---
+node_modules/
+dist/
+*.local
+
+# --- rust / tauri ---
+target/
+src-tauri/target/
+src-tauri/gen/
+
+# --- 本地敏感文件：绝不进 git ---
+*.secret.json
+config.local.*
+secrets/
+
+# --- 编辑器 / 系统 ---
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
+# --- 截图：含真实工作内容，不推仓库 ---
+docs/screenshots/
