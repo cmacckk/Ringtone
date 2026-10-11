@@ -6,6 +6,17 @@
 
 ### Added
 
+#### M6 · README 重做（截图 + 演示数据目录）
+
+- **README 按 [PastePaw](https://github.com/XueshiQiao/PastePaw) 的骨架重写**：居中标题 + 徽章 + emoji 功能清单 +
+  「截图」章节（10 张真截图 + 中文说明）+ 安装 / 快捷键 / 技术栈 / 快速开始 / 项目结构 / 设计约定。
+  技术细节一节没删，只是重新排了位置。
+- **截图用演示数据，不进真实工作内容**：新增 `RINGTONE_DATA_DIR` 环境变量（`src-tauri/src/lib.rs` 的 `data_dir()`），
+  数据库与背景图都跟着它走（`commands.rs` 的背景图路径改成 `crate::data_dir(app)`，否则背景图会写到真实目录）。
+  这样能拿同一份代码 + 一份演示库起第二个实例来截图，不碰用户的真实数据、也不会真发推送。
+- 截图落在 `docs/shots/`（深浅各一张，共 18 张）。`docs/screenshots/`（开发时的真实界面）仍被 `.gitignore` 挡着。
+- `scripts/shot.mjs` 新增 `--prefix <前缀>`（`--prefix ""` 可去掉 `m5-` 前缀）。
+
 #### M6 · 开机自启 + 重复任务的日期区间（从哪天到哪天）
 
 - **开机自启开关**（设置 → 通用 → 「开机自启」卡）：勾上就写当前用户那一项注册表
@@ -246,7 +257,16 @@
 - 幂等保障：`occurrences(task_id, fire_at_ms)` 唯一索引 + `pending → sending` 认领锁，重启或重复 tick 都不会重复通知。
 - 勾选完成会把未到点的实例作废（`skipped`），取消完成会按当前时间重建。
 
+### Fixed
+
+- **`scripts/shot.mjs` 的参数解析会静默吞掉后面的参数**：原来是「按位置两两配对」，`--reload` 这种开关会把
+  紧跟着的 `--name` 当成自己的值，于是 name / eval 读不到且不报错（图默默存成 `dark.png`）。
+  改成：遇到下一个 token 是 `--xxx` 或到头就当开关（值 `"1"`），否则吃掉下一个 token 当值。
+
 ### Changed
+
+- README 结构与文案（见上，`### Added`），并补上「同一个窗口里改 `localStorage` 收不到 `storage` 事件」等
+  几条新的设计约定。
 
 - `tasks` 加列 `hidden`（**v5 迁移**，`MIGRATION_V5`），新增设置表 `settings(key, value)`：
   上下班提醒就是 4 条 `hidden = 1` 的任务 —— `tasks_on_day` / `task_stats` / `next_reminder` 都加了 `hidden = 0`，

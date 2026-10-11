@@ -1,10 +1,222 @@
+<div align="center">
+
+<img src="src-tauri/icons/128x128.png" width="96" alt="Ringtone" />
+
 # Ringtone
 
-本地优先的**定时提醒 + 多平台推送**桌面应用。到点之后按通道把提醒推出去：钉钉、飞书。
+**本地优先的定时提醒 + 多平台推送桌面应用**
 
-对标 [kite.kitlib.cn](https://kite.kitlib.cn/) 的待办/日历体验，补齐它的缺口：**到点自动联动社交平台通知**。
+到点之后把提醒推到钉钉 / 飞书；关机不补发、发送失败会降级，数据只存在自己机器上。
 
-## 当前状态
+[![平台](https://img.shields.io/badge/%E5%B9%B3%E5%8F%B0-Windows%2010%2B-0078D6?style=flat-square)](https://github.com/cmacckk/Ringtone)
+[![Tauri](https://img.shields.io/badge/Tauri-2-24C8DB?style=flat-square&logo=tauri&logoColor=white)](https://tauri.app)
+[![React](https://img.shields.io/badge/React-19-61DAFB?style=flat-square&logo=react&logoColor=black)](https://react.dev)
+[![版本](https://img.shields.io/badge/%E7%89%88%E6%9C%AC-0.1.0-blue?style=flat-square)](https://github.com/cmacckk/Ringtone)
+[![测试](https://img.shields.io/badge/cargo%20test-146%20passed-34c759?style=flat-square)](https://github.com/cmacckk/Ringtone)
+
+</div>
+
+> 对标 [Kite 待办](https://kite.kitlib.cn/) 的按天待办体验，补上它的缺口：**到点自动联动社交平台通知**。
+> 只做单向推送（不接收回调）、只在自己机器上跑、不需要服务器和域名。
+
+---
+
+## ✨ 功能
+
+- 🗓 **按天规划，离线可用** —— 460×720 窄竖窗，一周一条周条 + 卡片列表；SQLite 存在本机，不用登录、断网照常用。
+- ⏰ **到点真的会提醒你** —— 到点把「时间 + 标题 + 备注」推到**钉钉 / 飞书**；主渠道发失败自动降级到下一个渠道，全挂了用本机系统通知兜底，并留一条失败记录。
+- 🔁 **重复规则** —— 每天 / 工作日 / 每周（可多选星期几）/ 每月 / 每月最后工作日 / 每年，支持「**从 2026-10-13 重复到 2026-10-15**」这样的日期区间，起始日随时能改。
+- 🇨🇳 **认中国节假日** —— 「工作日」与「每月最后工作日」内置 2026 年国务院安排：法定节假日不响、**调休补班的周六日照响**；「每月 31 日」在 2 月自动落到 28/29 日，不会整月不响。
+- ✍️ **中文快捷录入** —— 输入框里写 `明天九点交周报`、`每周一三五交周报`、`10/20 交报告`、`每月最后一个工作日 巡检机房`，实时显示识别结果，回车即成任务。
+- 🔔 **提前提醒** —— 准点 / 提前 1、5、10、30 分钟 / 1 小时 / 1 天。
+- 💬 **提醒渠道按任务选** —— 有的任务只想发钉钉、有的只想发飞书，逐条可设；只勾一个渠道时失败了就本地兜底，**不会偷偷发到另一个渠道**。
+- 🪟 **贴边浮窗** —— 主窗口最小化后贴在屏幕边缘，鼠标移过去展开；浮窗里能直接勾完成、能拖动换边、字体字号透明度可单独调，永远在最前面。
+- ⚡ **一键叫浮窗** —— 全局快捷键（默认未设，示例 `Ctrl+Shift+X`）或**鼠标侧键**，在任何程序里都能按。
+- 🚀 **开机自启** —— 登录后直接待命在托盘里，主窗口不往桌面上弹，到点照样推。
+- 🕘 **上下班提醒** —— 填四个时间点（上午/下午上下班）+ 提前多少分钟，界面顶部显示「距离下班还有 8 分 1 秒」。
+- 📤 **导入导出** —— 导出 Markdown（给人看）和 CSV（给 Excel 看，带 BOM）；再导入能原样还原重复规则与提前提醒，**只新增不覆盖**。
+- 🎨 **看着舒服** —— 深/浅主题、六款中文字体、字号 12~20px、窗口透明度、背景图、任务配色（8 色低饱和，已完成的不上色）、重点星标（加粗 + 粗色条，不进排序）。
+- 📊 **月总览** —— 一个月一张网格：每格「已完成 / 当天条数」，全干完的偏绿、没干完的偏蓝；点某天就地列出那天的任务。
+- 🖱 **三层右键菜单** —— 任务行（重点 / 编辑 / 完成 / 删除）、日期格（在那天加任务 / 跳过去 / 从剪贴板新建）、留白（加任务 / 显示浮窗 / 设置 / 总览 / 收进托盘）。
+
+---
+
+## 📸 截图
+
+> 下面全部是**演示数据**（假渠道、假待办），深浅两套都有，浅色见 `-light.png`。
+
+### 主界面
+
+<img src="docs/shots/main-dark.png" width="330" alt="主界面（深色）" /> <img src="docs/shots/main-light.png" width="330" alt="主界面（浅色）" />
+
+顶部三格是「设置 / 下一条提醒 / 今日进度」，中间周条（右上角橙点 = 那天有安排），下面是当天的任务：
+左侧彩条是任务标识色，`↻` 是重复规则、`🔔` 是提前提醒，红色时间 = 快到点了，★ = 重点。
+
+### 中文快捷录入
+
+<img src="docs/shots/composer-dark.png" width="330" alt="快捷录入" />
+
+写 `明天九点交周报`，下面立刻显示 `识别到：明天 09:00 · 标题「交周报」`；同一行还能设重复规则、提醒点、发到哪个渠道。
+
+### 编辑任务（重复规则 / 提醒 / 渠道）
+
+<img src="docs/shots/edit-dark.png" width="330" alt="编辑任务" />
+
+双击标题进编辑态：改标题与时刻、改重复规则（这里是「每天，从 2026/10/11 重复到 2026/10/15」）、提前提醒、通知渠道，以及「停止重复」。
+
+### 推送渠道
+
+<img src="docs/shots/push-dark.png" width="330" alt="推送渠道设置" />
+
+钉钉与飞书两张卡：「检查配置 / 验证凭据」「发测试消息」「设为主渠道」「停用 / 启用」「删除」；下面是发送记录（成功写渠道侧 `message_id`，失败写 HTTP 状态与原始错误码）。
+
+### 通用设置
+
+<img src="docs/shots/prefs-dark.png" width="330" alt="通用设置" />
+
+快捷键、开机自启、导入导出、上下班提醒、背景图片。
+
+### 外观
+
+<img src="docs/shots/look-dark.png" width="330" alt="外观设置" />
+
+字体 / 字号（主窗口一套、浮窗可单独一套）、主窗口与浮窗各自的透明度，改一下立刻生效、不用保存。
+
+### 月总览
+
+<img src="docs/shots/month-dark.png" width="330" alt="月总览" />
+
+本月合计 + 完成率、一个月网格、这个月的统计，以及**就地**列出选中那天的任务。
+
+### 右键菜单
+
+<img src="docs/shots/menu-dark.png" width="330" alt="任务行右键菜单" />
+
+### 贴边浮窗
+
+<img src="docs/shots/float-dark.png" width="330" alt="贴边浮窗" />
+
+主窗口最小化后贴在屏幕边上，显示今天最多 5 条（含已完成的）；点圆圈直接勾完成，点一下打开主窗口，拖一下换到另一条边。
+
+---
+
+## 📦 安装
+
+**安装包（Windows 10 1803+ / Windows 11）**
+
+```text
+Ringtone_0.1.0_x64-setup.exe        4.65 MiB（NSIS，当前用户安装，不需要管理员）
+```
+
+- 依赖 **WebView2**：Win11 与较新的 Win10 自带；没有的话装一次微软的 Evergreen Runtime 即可。
+- 安装包**没有代码签名**，SmartScreen 会拦一下：点「更多信息」→「仍要运行」。
+- 卸载走系统「应用和功能」，卸载**不会**删掉 `%APPDATA%\cn.ringtone.desktop` 里的数据库（想彻底清就手动删这个目录）。
+
+**从源码跑起来**
+
+```bash
+# 需要 Node 20+ / pnpm、Rust stable、VS Build Tools（C++ 桌面开发）
+pnpm install
+pnpm tauri dev            # 开发窗口（vite + cargo run）
+pnpm tauri build          # 打 Windows 安装包（NSIS）
+```
+
+---
+
+## ⌨️ 快捷键
+
+| 按键 | 作用 |
+| --- | --- |
+| `回车` | 录入框里添加任务 |
+| `Esc` | 收起录入框 / 取消编辑 / 关右键菜单 |
+| `双击标题` | 进入编辑（重复规则 · 提醒点 · 通知渠道） |
+| `右键` | 菜单（任务行 / 日期格 / 留白，见上面截图） |
+| 全局热键（默认未设，示例 `Ctrl+Shift+X`） | 在任何程序里一键叫出浮窗 |
+| 鼠标侧键 `4` / `5`（设置里开启） | 同上，键鼠都不用切窗口 |
+
+> 全局热键**必须带 Ctrl / Alt 这类修饰键**（不然会把你正常打字的按键抢走）；被别的程序占用时设置里会直接说出原因。
+> 鼠标侧键是自写的 Windows 低级鼠标钩子，**设上之后它在全局用来叫浮窗，不再触发浏览器的前进 / 后退**。
+
+---
+
+## 🧱 技术栈
+
+| 层 | 用了什么 | 为什么 |
+| --- | --- | --- |
+| 外壳 | **Tauri 2**（Rust） | 对标产品安装包只有 3.72 MB ⇒ 体积敏感；Electron 起步 80 MB+ |
+| 前端 | **React 19 + TypeScript（strict）+ Vite** | 组件化 + 类型检查；Vite 常驻开发体验好 |
+| 存储 | **SQLite（rusqlite，bundled 编译）** | 单文件、无外部依赖，编译进二进制，用户不用装任何东西 |
+| 时间 | **chrono**，全部 `Local` 时区 | 跨天、跨休眠的语义要自己写清楚 |
+| 原生能力 | tray-icon / notification / global-shortcut / autostart / dialog | 托盘常驻、系统通知兜底、全局热键、开机自启、选文件 |
+
+---
+
+## 🚀 快速开始
+
+```bash
+pnpm install          # 首次
+pnpm tauri dev        # 起开发窗口（vite + cargo run）
+pnpm tauri build      # 打 Windows 安装包（NSIS）
+```
+
+**交付前必跑（四条，缺一不可）：**
+
+```bash
+cd src-tauri
+cargo fmt --check
+cargo check
+cargo clippy --all-targets
+cargo test            # 当前 146 passed
+```
+
+```bash
+pnpm exec tsc --noEmit
+pnpm build
+```
+
+> `cargo check` **不编译 `#[cfg(test)]` 代码**：改了函数签名后 check 会过，而 `cargo test` 会因为测试里的调用点坏掉而编不过。
+
+---
+
+## 📁 项目结构
+
+```text
+Ringtone/
+├─ src/                        前端（React + TS）
+│  ├─ App.tsx                  待办页：周条 + 列表 + 录入 + 编辑 + 筛选 + 计数
+│  ├─ TitleBar.tsx             自绘标题栏（主题 / 外观 / 浮窗 / 置顶 / 最小化 / 收托盘）
+│  ├─ Float.tsx                贴边浮窗（轮询、展开收起、拖动换边、勾完成、右键菜单）
+│  ├─ Overview.tsx             月总览
+│  ├─ Settings.tsx             设置面板外壳（推送渠道 / 通用 两个页签）
+│  ├─ Prefs.tsx                通用设置（快捷键 / 开机自启 / 导入导出 / 上下班 / 背景图）
+│  ├─ AppearancePanel.tsx      外观（字体 / 字号 / 透明度）
+│  ├─ Repeat.tsx               重复规则编辑器
+│  ├─ Advance.tsx / Notify.tsx 提前提醒 / 通知渠道选择
+│  ├─ ContextMenu.tsx          自绘右键菜单
+│  ├─ quick.ts                 中文快捷录入解析
+│  ├─ day.ts / time 相关        日期工具（**不用 `toISOString()`**，见设计约定）
+│  ├─ api.ts                   invoke 封装与类型（字段与 Rust 一致）
+│  ├─ appearance.ts / theme.ts / colors.ts / sync.ts / photo.ts
+│  └─ styles.css               全部样式（深/浅两套变量 + 43 处字号走 `--fs-k`）
+├─ src-tauri/                  后端（Rust）
+│  ├─ src/lib.rs               入口：建窗口/托盘、窗口事件、命令注册、调度线程
+│  ├─ src/db.rs                迁移（清单驱动）+ 任务/实例/渠道/队列/日志的读写
+│  ├─ src/scheduler.rs         到点调度（网格对齐 tick + 错过语义 + 幂等）
+│  ├─ src/deliver.rs           投递、退避重试、降级链、限流、本地兜底
+│  ├─ src/channel/             渠道实现（dingtalk.rs / feishu.rs + 错误分类）
+│  ├─ src/work.rs              上下班提醒（隐藏任务）  src/holiday.rs 法定节假日
+│  ├─ src/port.rs              导入导出            src/background.rs 背景图
+│  ├─ src/mouse.rs             鼠标侧键钩子         src/models.rs / time.rs 校验
+│  └─ tauri.conf.json / capabilities/default.json / icons/
+├─ scripts/
+│  ├─ shot.mjs                 CDP 截图（深/浅两套，可先点按钮再截）
+│  └─ publish-release.ps1      建 GitHub release 并上传安装包
+└─ docs/                       方案与每个里程碑的报告
+```
+
+---
+
+## 📊 里程碑与当前状态
 
 | 里程碑 | 内容 | 状态 |
 | --- | --- | --- |
@@ -13,29 +225,29 @@
 | M3 | 飞书渠道打通（自建应用 + 错误分类 + 失败兜底） | ✅ 完成 |
 | M4 | 钉钉渠道 + 投递队列 + 降级链 + 限流闸门 | ✅ 完成 |
 | M5 | 界面改造（kite 风格：自绘标题栏 + 信息块 + 周条 + 卡片列表，深/浅两套主题） | ✅ 完成 |
-| M6 | 打磨：重复规则、快捷录入、提醒渠道选择、主题 / 筛选 / 浮窗、外观设置、月总览、浮窗勾选、通用设置（快捷键 / 开机自启 / 导入导出 / 上下班提醒 / 背景图）、交互与观感第二批（右键菜单 / 重点 / 配色 / 鼠标侧键 / 多屏落点）、空白处右键菜单、节假日感知（工作日 / 月末对齐 / 每月最后工作日）、重复任务的日期区间（从哪天到哪天）、打包分发 | 🔄 进行中（重复规则 ✅ 提前提醒录入 ✅ 快捷录入 ✅ 提醒渠道选择 ✅ 主题·筛选·计数·浮窗 ✅ 外观设置·浮窗拖动换边 ✅ 月总览 ✅ 浮窗可勾完成·浮窗独立字体字号 ✅ 快捷键·导入导出·上下班提醒·背景图 ✅ 右键菜单·重点·配色·鼠标侧键·标题栏浮窗按钮·多屏落点 ✅ 留白/日期/浮窗空白右键菜单·从剪贴板新建 ✅ 节假日感知·月末对齐·Markdown 往返 ✅ 开机自启 ✅ 重复任务日期区间（从 / 重复到，起始日可改）✅；密钥加密用户明确不做，安装包进行中） |
+| M6 | 打磨：重复规则、快捷录入、提醒渠道选择、主题 / 筛选 / 浮窗、外观设置、月总览、浮窗勾选、通用设置（快捷键 / 开机自启 / 导入导出 / 上下班提醒 / 背景图）、交互与观感第二批（右键菜单 / 重点 / 配色 / 鼠标侧键 / 多屏落点）、空白处右键菜单、节假日感知（工作日 / 月末对齐 / 每月最后工作日）、重复任务的日期区间（从哪天到哪天）、打包分发 | 🔄 进行中（上面列的都已 ✅，只剩安装包分发；密钥加密用户明确不做） |
 
-M1–M4 已实现的能力：
+核心链路（M1–M4）：
 
-- 按天列出任务，时间升序、无时刻的排在最后；
+- 按天列出任务，时间升序、**无时刻的排在最后**；
 - 新建 / 编辑 / 勾选完成 / 删除（删除只接受明确 id 列表）；
 - 关窗不退出，驻留系统托盘（托盘菜单：显示主窗口 / 退出）；
 - 到点触发：**先发主渠道，失败按错误类型退避重试或换下一个渠道，全失败才用本机系统通知兜底**；
 - 投递走队列（`push_jobs`），退避重试不会拖住其它提醒，重启后也知道哪些没发完；
 - 限流闸门：钉钉 20 条/分、飞书 100 条/分，超限**推迟**而不是硬发（不给渠道封禁的机会）；
 - 失败可见：托盘换红点 + tooltip `Ringtone · N 条提醒发送失败`，界面右上角 `⚠ N 条没发出去`（点「知道了」清除）；
-- 推送设置面板（窗口右上角「推送设置」）：钉钉与飞书两张卡片，
-  带「检查配置 / 验证凭据」「发测试消息」「设为主渠道」「停用 / 启用」「删除」，下面带发送记录；
-- 渠道范围：**钉钉 + 飞书**（Server 酱与 PushPlus 因额度/收费原因不做）。
+- 渠道范围：**钉钉 + 飞书**（Server 酱免费版只显示标题、PushPlus 未实名额度为 0，都不做）。
+
+---
 
 ## 配置推送渠道（钉钉）
 
 1. 钉钉群 → 群设置 → 智能群助手 → 添加机器人 → 自定义（webhook）机器人；
 2. 安全设置勾**加签**，把密钥（`SEC` 开头）和 Webhook 地址各拿一份；
-3. 应用里点「推送设置」，粘 Webhook 地址 + 加签密钥，保存并启用；
+3. 应用里点「设置 → 推送渠道」，粘 Webhook 地址 + 加签密钥，保存并启用；
 4. 点「发测试消息」，群里应收到一条 `【Ringtone 测试】`。
 
-发消息：`POST https://oapi.dingtalk.com/robot/send?access_token=<token>`（带 `timestamp` 与 `sign`）。
+发消息：`POST https://oapi.dingtalk.com/robot/send?access_token=<你的access_token>`（带 `timestamp` 与 `sign`）。
 
 - **上限是每个机器人 20 条/分钟，超了会被封 10 分钟**。这是所有渠道里最硬的一条限制，Ringtone 用滑动窗口拦着，
   到上限的那条会推迟到窗口滑出再发（推迟不算一次失败尝试）。
@@ -48,7 +260,7 @@ M1–M4 已实现的能力：
 1. 飞书开放平台建一个**企业自建应用**，记下 `App ID` 与 `App Secret`；
 2. 开通权限 `im:message`（或 `im:message:send_as_bot`），把机器人拉进目标群；
 3. 取群的 `chat_id`：`GET https://open.feishu.cn/open-apis/im/v1/chats`（带 `Bearer <tenant_access_token>`）；
-4. 应用里点「推送设置」，填 `App ID` / `App Secret`，接收方类型选「群（chat_id）」、粘 `oc_` 开头的值，保存并启用。
+4. 应用里点「设置 → 推送渠道」，填 `App ID` / `App Secret`，接收方类型选「群（chat_id）」、粘 `oc_` 开头的值，保存并启用。
 
 取 `tenant_access_token`：`POST https://open.feishu.cn/open-apis/auth/v3/tenant_access_token/internal`；
 发消息：`POST https://open.feishu.cn/open-apis/im/v1/messages?receive_id_type=chat_id`。
@@ -71,6 +283,10 @@ M1–M4 已实现的能力：
 
 渠道尝试顺序 = 「已启用」的渠道按 `priority` 升序（界面上的「设为主渠道」就是调这个）；
 所有渠道都失败 → 本机系统通知兜底 + 托盘红点 + 界面角标 + 写 `send_log`。
+
+**错过语义（有意为之）**：App 没运行时（关机、没登录）错过的提醒**一律标 `missed`、不补发**——
+它的意义就是「人不在电脑前也能收到」，事后补发一串翻旧账的通知比不补更糟。只有一种例外：
+机器休眠后唤醒（tick 间隔 > 90s）且过期不超过 30 分钟的实例会补发，并在记录里标成 `late_sent`。
 
 ## 重复规则
 
@@ -272,23 +488,16 @@ M1–M4 已实现的能力：
 460×720 的窄竖窗（最小 400×560），无边框自绘标题栏，深色为主、跟随系统切亮色。
 
 ```text
-┌─ 标题栏：Ringtone          📌  －  ✕（✕ 只是收进托盘）
-├─ 顶部三格：[推送设置]  [下一条提醒 · 35 分钟后 / 检查邮件和消息]  [今日进度 1/5 + 进度条]
+┌─ 标题栏：Ringtone      📅 🌙 Aa [浮窗]  📌  －  ✕（✕ 只是收进托盘）
+├─ 顶部三格：[设置]  [下一条提醒 · 35 分钟后 / 检查邮件和消息]  [今日进度 1/5 + 进度条]
 ├─ 周条：‹  周一 10-05 … 周四 10-08(选中,右上角橙点=这天有安排) … 周日 10-11  ›
+├─ 筛选：全部 / 未完成 / 已完成
 ├─ 卡片列表：○ 检查邮件和消息              16:44
 │              ● 交周报（已完成，删除线）  17:04
 │              ＋ 添加任务
-└─ 底注：双击标题可编辑 · 点 ✕ 只是收进托盘，到点照样提醒
+└─ 底注：双击标题可编辑 · 任务行右键有菜单 · 点 ✕ 只是收进托盘，到点照样提醒
+                       今天 6 条 · 全部 9 条
 ```
-
-截图见 `docs/screenshots/`（深浅两套 + 添加态 + 推送设置页 + 最小窗口）：
-
-| 文件 | 内容 |
-| --- | --- |
-| `m5-dark.png` / `m5-light.png` | 待办页深色 / 亮色 |
-| `m5-composer-dark.png` | 点开「+ 添加任务」后的输入态 |
-| `m5-settings-dark.png` / `m5-settings-light.png` | 推送设置页 |
-| `m5-narrow-dark.png` | 400×560（窗口最小尺寸） |
 
 ### 截图怎么做（不要用系统截屏）
 
@@ -299,46 +508,27 @@ M1–M4 已实现的能力：
 WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS="--remote-debugging-port=9223" pnpm tauri dev
 node scripts/shot.mjs                                     # 深浅各一张
 node scripts/shot.mjs --click ".hero-btn" --name settings  # 先点按钮再截（截弹层）
+node scripts/shot.mjs --prefix "" --out docs/shots --name main   # 去掉 m5- 前缀、换输出目录
 node scripts/shot.mjs --eval "表达式"                       # 量尺寸 / 找溢出，不截图
 ```
 
-## 技术栈
-
-- 前端：React 19 + Vite（`src/`）
-- 后端：Tauri 2 + Rust（`src-tauri/`）
-- 存储：SQLite（rusqlite，bundled 编译，无外部依赖）
-- 时间：全部走 `chrono`，`Local` 时区
-
-## 开发
+**截图必须用干净数据**：真实待办里有单位名、人名、真实材料标题，绝不能进公开仓库。
+做法是给应用加一个数据目录覆盖（环境变量 `RINGTONE_DATA_DIR`），用同一份代码 + 一份演示数据库起第二个实例来截图：
 
 ```bash
-pnpm install          # 首次
-pnpm tauri dev        # 起开发窗口（vite + cargo run）
-pnpm tauri build      # 打 Windows 安装包（NSIS）
+RINGTONE_DATA_DIR="C:/.../rt-demo" WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS="--remote-debugging-port=9223" ./src-tauri/target/debug/ringtone.exe
 ```
 
-## 交付前必跑（四条，缺一不可）
+（`docs/screenshots/` 里是开发时的真实工作界面，已写进 `.gitignore`、不进仓库；进仓库的是 `docs/shots/`。）
 
-```bash
-cd src-tauri
-cargo fmt --check
-cargo check
-cargo clippy --all-targets
-cargo test
-```
-
-前端：
-
-```bash
-pnpm exec tsc --noEmit
-pnpm build
-```
+---
 
 ## 数据存放
 
 | 内容 | 路径 |
 | --- | --- |
 | 数据库 | `%APPDATA%\cn.ringtone.desktop\ringtone.db` |
+| 背景图 | `%APPDATA%\cn.ringtone.desktop\backgrounds\` |
 
 ## 设计约定（踩过坑，别改）
 
@@ -376,9 +566,20 @@ pnpm build
   周条和橙点会整体错一天。「今天」从后端 `today_local()` 拿。
 - **前端字段用驼峰、Rust 字段用 snake_case**，Tauri 会自己转（`fromDay` ↔ `from_day`）。
   这条**必须实机验证**：名字对不上不会报错，只会静默拿到空数据。
+- **同一个窗口里改 `localStorage` 收不到 `storage` 事件**（它只在别的文档触发）：本窗口也要跟着变的地方
+  （背景图浓度、外观、浮窗勾选后的主列表）要额外 `window.dispatchEvent(new Event(...))`，见 `src/sync.ts`。
+
+---
 
 ## 文档
 
 - 完整方案 / 风险与取舍：`docs/kitealarm-plan.md`
 - 里程碑报告：`docs/M2-report.md`、`docs/M3-report.md`、`docs/M4-report.md`、`docs/M5-ui-report.md`、`docs/M6-repeat-report.md`、`docs/M6-advance-report.md`、`docs/M6-quick-report.md`、`docs/M6-channels-report.md`、`docs/M6-ui-report.md`、`docs/M6-appearance-report.md`、`docs/M6-overview-report.md`、`docs/M6-float-report.md`、`docs/M6-prefs-report.md`、`docs/M6-ui2-report.md`、`docs/M6-ctxmenu-report.md`、`docs/M6-package-report.md`、`docs/M6-autostart-range-report.md`
+- 变更日志：`CHANGELOG.md`
 - 发版：`scripts/publish-release.ps1`（建 release + 上传安装包；用法见 `docs/M6-package-report.md` 第 5 节）
+
+---
+
+<div align="center">
+<sub>基于 Tauri 2 + React 19 + SQLite · 只用来自用，数据不出本机</sub>
+</div>

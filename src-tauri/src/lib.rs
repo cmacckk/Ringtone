@@ -56,7 +56,7 @@ pub fn run() {
             Some(vec![MINIMIZED_ARG]),
         ))
         .setup(|app| {
-            let dir = app.path().app_data_dir()?;
+            let dir = data_dir(app.handle()).map_err(std::io::Error::other)?;
             let conn = db::open(&dir.join("ringtone.db"))?;
             db::migrate(&conn)?;
 
@@ -569,6 +569,27 @@ const MINIMIZED_ARG: &str = "--minimized";
 /// 这次启动带没带 `--minimized`（手动双击 exe 时不会带）。
 fn started_minimized() -> bool {
     std::env::args().any(|a| a == MINIMIZED_ARG)
+}
+
+/// 应用数据目录（数据库 `ringtone.db`、背景图 `backgrounds/` 都在里面）。
+///
+/// 默认是系统给的应用目录；设了环境变量 `RINGTONE_DATA_DIR` 就用它。
+/// 加这个口子是为了**用干净数据截 README 的图**：拿另一个目录起一个实例，
+/// 里面放演示用的待办，绝不碰用户自己那份真实数据。
+///
+/// ```bash
+/// RINGTONE_DATA_DIR="$TEMP/rt-demo" pnpm tauri dev
+/// ```
+pub fn data_dir(app: &AppHandle) -> Result<std::path::PathBuf, String> {
+    if let Ok(p) = std::env::var("RINGTONE_DATA_DIR") {
+        let p = p.trim();
+        if !p.is_empty() {
+            return Ok(std::path::PathBuf::from(p));
+        }
+    }
+    app.path()
+        .app_data_dir()
+        .map_err(|e| format!("取应用数据目录失败：{e}"))
 }
 
 /// 当前生效的快捷键（进程内记着，换绑时要先把旧的卸掉）。

@@ -5,7 +5,7 @@ use std::sync::Mutex;
 
 use rusqlite::Connection;
 use serde::{Deserialize, Serialize};
-use tauri::{AppHandle, Manager, State};
+use tauri::{AppHandle, State};
 use tauri_plugin_dialog::DialogExt;
 
 use crate::channel::{dingtalk, feishu};
@@ -606,10 +606,11 @@ pub async fn import_tasks(
 }
 
 /// 应用数据目录（背景图、数据库都在里面）。
+///
+/// 走 `crate::data_dir`：那里还认 `RINGTONE_DATA_DIR`（截图/演示用干净数据），
+/// 否则背景图会写到真实目录、数据库却在演示目录，两边对不上。
 fn app_dir(app: &AppHandle) -> Result<PathBuf, String> {
-    app.path()
-        .app_data_dir()
-        .map_err(|e| format!("取应用数据目录失败：{e}"))
+    crate::data_dir(app)
 }
 
 /// 把弹窗返回的路径转成 `PathBuf`（桌面上永远是路径）。

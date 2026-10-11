@@ -17,16 +17,26 @@ import { mkdirSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 
 const opts = new Map();
-for (let i = 2; i < process.argv.length - 1; i += 2) {
-  if (process.argv[i].startsWith("--")) {
-    opts.set(process.argv[i].slice(2), process.argv[i + 1]);
+// 参数解析：`--key value`；`--flag` 后面跟的是另一个 `--xxx`（或到头了）时，当成开关（值 "1"）。
+// 注意 `--flag` 不能空着不处理：以前那种「按位置两两配对」的写法会让 `--reload` 把下一个 `--name` 吃掉，
+// 结果 name / eval 这些后面的参数全都读不到，而且不报错（图会默默存成 `dark.png`）。
+for (let i = 2; i < process.argv.length; i++) {
+  const a = process.argv[i];
+  if (!a.startsWith("--")) continue;
+  const next = process.argv[i + 1];
+  if (next === undefined || next.startsWith("--")) {
+    opts.set(a.slice(2), "1");
+  } else {
+    opts.set(a.slice(2), next);
+    i++;
   }
 }
 const port = opts.get("port") ?? "9223";
 const outDir = opts.get("out") ?? "docs/screenshots";
 const wanted = opts.get("theme") ?? "both";
 const themes = wanted === "both" ? ["dark", "light"] : [wanted];
-// --name xxx → 输出 m5-xxx-dark.png；--click "选择器" 可在截图前先点一下（用于截弹层/设置页）；--dbl "选择器" 双击进编辑态
+const prefix = opts.get("prefix") ?? "m5-";
+// --name xxx → 输出 m5-xxx-dark.png（`--prefix ""` 可以去掉前缀，README 用的那批图就是这么拍的）；--click "选择器" 可在截图前先点一下（用于截弹层/设置页）；--dbl "选择器" 双击进编辑态
 const name = opts.get("name");
 const clickSel = opts.get("click");
 // --eval "表达式"：先跑一段 JS 把结果打出来（用于量尺寸、找溢出的元素），不做截图
@@ -167,7 +177,7 @@ if (ctxSel) {
     features: [{ name: "prefers-color-scheme", value: theme }],
   });
   await new Promise((r) => setTimeout(r, 900)); // 等一帧渲染 + 数据回来
-  const file = join(outDir, name ? `m5-${name}-${theme}.png` : `m5-${theme}.png`);
+  const file = join(outDir, `${prefix}${name ? `${name}-` : ""}${theme}.png`);
   const shot = await call("Page.captureScreenshot", { format: "png" });
   writeFileSync(file, Buffer.from(shot.data, "base64"));
   console.log(`SAVED ${file}`);
