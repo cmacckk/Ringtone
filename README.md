@@ -112,7 +112,7 @@ SHA256  0dcaa5c1b78478685cc096545daa54d96b1a4e5b71ab919a6c0e9361415968b7
 ```
 
 - 依赖 **WebView2**：Win11 与较新的 Win10 自带；没有的话装一次微软的 Evergreen Runtime 即可。
-- 安装包**没有代码签名**，SmartScreen 会拦一下：点「更多信息」→「仍要运行」。
+- 安装包**没有代码签名**（没有商业证书，签名脚本已备好：`scripts/sign-installer.ps1`），SmartScreen 会拦一下：点「更多信息」→「仍要运行」。
 - 卸载走系统「应用和功能」，卸载**不会**删掉 `%APPDATA%\cn.ringtone.desktop` 里的数据库（想彻底清就手动删这个目录）。
 
 **从源码跑起来**
@@ -213,7 +213,8 @@ Ringtone/
 │  └─ tauri.conf.json / capabilities/default.json / icons/
 ├─ scripts/
 │  ├─ shot.mjs                 CDP 截图（深/浅两套，可先点按钮再截）
-│  └─ publish-release.ps1      建 GitHub release 并上传安装包
+│  ├─ publish-release.ps1      建 GitHub release 并上传安装包
+│  └─ sign-installer.ps1       给安装包做代码签名 + 验签（需受信任证书）
 └─ docs/                       方案与每个里程碑的报告
 ```
 
@@ -228,7 +229,7 @@ Ringtone/
 | M3 | 飞书渠道打通（自建应用 + 错误分类 + 失败兜底） | ✅ 完成 |
 | M4 | 钉钉渠道 + 投递队列 + 降级链 + 限流闸门 | ✅ 完成 |
 | M5 | 界面改造（kite 风格：自绘标题栏 + 信息块 + 周条 + 卡片列表，深/浅两套主题） | ✅ 完成 |
-| M6 | 打磨：重复规则、快捷录入、提醒渠道选择、主题 / 筛选 / 浮窗、外观设置、月总览、浮窗勾选、通用设置（快捷键 / 开机自启 / 导入导出 / 上下班提醒 / 背景图）、交互与观感第二批（右键菜单 / 重点 / 配色 / 鼠标侧键 / 多屏落点）、空白处右键菜单、节假日感知（工作日 / 月末对齐 / 每月最后工作日）、重复任务的日期区间（从哪天到哪天）、微信推送（WxPusher）渠道、字体可选全部系统字体、打包分发 | ✅ 完成（`v0.1.0` / `v0.2.0` 都已发 release；密钥加密用户明确不做，安装包暂不做签名） |
+| M6 | 打磨：重复规则、快捷录入、提醒渠道选择、主题 / 筛选 / 浮窗、外观设置、月总览、浮窗勾选、通用设置（快捷键 / 开机自启 / 导入导出 / 上下班提醒 / 背景图）、交互与观感第二批（右键菜单 / 重点 / 配色 / 鼠标侧键 / 多屏落点）、空白处右键菜单、节假日感知（工作日 / 月末对齐 / 每月最后工作日）、重复任务的日期区间（从哪天到哪天）、微信推送（WxPusher）渠道、字体可选全部系统字体、打包分发 | ✅ 完成（`v0.1.0` / `v0.2.0` 都已发 release；密钥加密用户明确不做，安装包签名脚本已备好、待证书） |
 
 核心链路（M1–M4）：
 
@@ -605,6 +606,7 @@ RINGTONE_DATA_DIR="C:/.../rt-demo" WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS="--remo
 - 里程碑报告：`docs/M2-report.md`、`docs/M3-report.md`、`docs/M4-report.md`、`docs/M5-ui-report.md`、`docs/M6-repeat-report.md`、`docs/M6-advance-report.md`、`docs/M6-quick-report.md`、`docs/M6-channels-report.md`、`docs/M6-ui-report.md`、`docs/M6-appearance-report.md`、`docs/M6-overview-report.md`、`docs/M6-float-report.md`、`docs/M6-prefs-report.md`、`docs/M6-ui2-report.md`、`docs/M6-ctxmenu-report.md`、`docs/M6-package-report.md`、`docs/M6-autostart-range-report.md`、`docs/M6-wxpusher-report.md`
 - 变更日志：`CHANGELOG.md`
 - 发版：`scripts/publish-release.ps1`（建 release + 上传安装包；用法见 `docs/M6-package-report.md` 第 5 节）
+- 签名：`scripts/sign-installer.ps1`（`-Thumbprint` / `-Pfx` / `-VerifyOnly`；为什么现在还没签，见同文档第 6 节）
 
 ---
 

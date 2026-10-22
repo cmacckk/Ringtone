@@ -112,7 +112,50 @@ pwsh -File .\scripts\publish-release.ps1
 脚本存成 **UTF-8 带 BOM**（Windows PowerShell 5.1 会把无 BOM 的中文按 GBK 读成乱码）；
 统一用 `pwsh`（7.x）跑——这台机器的 5.1 加载不出 `Get-FileHash`。
 
-## 6. 已知缺口（本轮没动的）
+## 6. 代码签名（2026-10-22）
+
+|| 项目 | 状态 |
+| --- | --- |
+| 签名脚本 | `scripts/sign-installer.ps1`（已写，已自签实测） |
+| 受信任的证书 | **没有**（本机证书存储空） |
+| 当前 release 里的安装包 | 未签名 → SmartScreen 会提示「未知发布者」 |
+
+脚本用法：
+
+```powershell
+# 证书装在「当前用户 → 个人 → 证书」里
+.\scripts\sign-installer.ps1 -Thumbprint 1A2B3C...
+
+# 手里是 pfx
+$env:CSC_KEY_PASSWORD = "证书密码"
+.\scripts\sign-installer.ps1 -Pfx D:\cert\ringtone.pfx
+
+# 只验签
+.\scripts\sign-installer.ps1 -VerifyOnly
+```
+
+它自己找 Windows SDK 里最新的 `signtool.exe`，用 `/fd sha256 /td sha256` 加 DigiCert 时间戳，签完自动 `verify /pa /v`
+并打印签名后的新 SHA256（签名会改字节，别忘了同步 README / release 说明）。没给证书时它不报错，
+而是列出三条可行路径。
+
+### 为什么不能“直接签”——三条真实路径
+
+1. **商业代码签名证书（OV / EV）**：DigiCert / Sectigo / GlobalSign 等，约 $200~500/年，要过个人或企业实名审核。
+   **EV 有即时信誉，SmartScreen 立刻不拦**；OV 要靠下载量慢慢累积声誉。
+2. **Azure Trusted Signing**：约 $9.99/月，需要 Azure 订阅 + 身份验证（个人主体目前只对部分国家/地区开放），
+   签名改用 `signtool sign /dlib /dmdf`，脚本要加一段分支。
+3. **SignPath Foundation**：对开源项目免费，需要向它申请并通过审核。
+
+**自签证书（`New-SelfSignedCertificate`）不算数**：能签、能验，也能读出签名者和时间戳，
+但别人那台机器不信任这条链，SmartScreen 照样报「未知发布者」（要手动把 .cer 导进『受信任的根证书颁发机构』才行，
+对公开发布没意义）。
+
+实测证据（自签，仅证明链路可用）：安装包 4,895,597 → **4,903,048 字节**（签名 + 时间戳约 7.4 KB），
+`Get-AuthenticodeSignature` 的 `SignerCertificate = CN=Ringtone Temp Signing Test`、
+`TimeStamperCertificate = CN=DigiCert SHA256 RSA4096 Timestamp Responder 2026 1`、
+`Status = UnknownError`（信息就是「根证书不受信任」）。测试证书与临时文件已删除，本机证书存储已经回到空。
+
+## 7. 已知缺口（本轮没动的）
 
 1. 节假日数据只到 **2026 年**：没有那一年的数据时「工作日」退化成「周一至周五」（宁多响不少响）。
    国务院安排每年 11 月才公布，届时要手动往 `src-tauri/src/holiday.rs` 加下一年。

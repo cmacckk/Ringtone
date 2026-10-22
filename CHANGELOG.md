@@ -4,7 +4,21 @@
 
 ## [Unreleased]
 
-（暂无）
+### Added
+
+#### 安装包签名脚本（`scripts/sign-installer.ps1`）
+
+- 一条命令签名 + 验签：`sign-installer.ps1 -Thumbprint <指纹>`（证书在 Windows 存储里）或
+  `-Pfx <路径>`（配合 `$env:CSC_KEY_PASSWORD`），支持 `-VerifyOnly` 单独验签。
+- 自动找 Windows SDK 里最新的 `signtool.exe`；时间戳走 `http://timestamp.digicert.com`
+  （`/fd sha256 /td sha256`），签完打印签名后新的 SHA256（改动字节后要同步到 README / release 说明）。
+- 没给证书时不报错退出，而是把三条可行路径（商业 OV/EV 证书、Azure Trusted Signing、SignPath Foundation
+  开源免费签名）和为什么自签证书不算数讲清楚。
+- **正式签名仍缺一张受信任的证书**：本机证书存储是空的，只有商业证书 / Azure / SignPath 才能消掉
+  SmartScreen 的「未知发布者」，这三条都要实名与付费、只能由作者去办。脚本已就绪，拿到证书即可签。
+- 用自签证书实测过整条链路：签名成功、DigiCert 时间戳成功、文件 4,895,597 → 4,903,048 字节，
+  `Get-AuthenticodeSignature` 能读出签名者与时间戳；验签按预期报
+  「根证书不受信任」——正是自签证书的边界，脚本会把这句翻译成人话。测试证书与临时文件均已删除。
 
 ## [0.2.0] - 2026-10-22
 
