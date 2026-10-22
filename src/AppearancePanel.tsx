@@ -1,15 +1,18 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   APPEARANCE_DEFAULTS,
   Appearance as AppearanceValue,
-  FONT_CHOICES,
+  FONT_FALLBACK,
   FONT_MAX,
   FONT_MIN,
   OPACITY_MIN,
+  SYSTEM_FONT,
   applyAppearance,
+  fontCss,
   loadAppearance,
   saveAppearance,
 } from "./appearance";
+import { listFonts } from "./api";
 
 /** 下拉里的「自己填」哨兵值：不会和真实字体栈撞 */
 const CUSTOM = "__custom__";
@@ -33,10 +36,20 @@ function pct(v: number): string {
  */
 export default function Appearance({ onClose }: { onClose: () => void }) {
   const [value, setValue] = useState<AppearanceValue>(() => loadAppearance());
-  // 字体是不是「自己填」：下拉里没有当前值（用户手写过 / 改过 localStorage）就算自己填
-  const [custom, setCustom] = useState(
-    () => !FONT_CHOICES.some((f) => f.value === loadAppearance().fontFamily),
-  );
+  // 系统里装了哪些字体：后端读注册表，读不到就回落一份常用的
+  const [fonts, setFonts] = useState<string[]>(FONT_FALLBACK);
+  // 字体是不是「自己填」：用户在下拉里选了「自己填…」才为真
+  const [custom, setCustom] = useState(false);
+  const [floatCustom, setFloatCustom] = useState(false);
+
+  useEffect(() => {
+    listFonts()
+      .then((all) => {
+        if (all.length > 0) setFonts(all);
+      })
+      // 读不到就继续用兜底那几项，不弹错（字体不是关键功能）
+      .catch(() => setFonts(FONT_FALLBACK));
+  }, []);
 
   // 浮窗到底用哪套字体/字号：自己设过就用自己那份，没设过（null）就跟主窗口
   const floatFamily = value.floatFontFamily ?? value.fontFamily;
@@ -93,11 +106,16 @@ export default function Appearance({ onClose }: { onClose: () => void }) {
                 update({ fontFamily: e.target.value });
               }}
             >
-              {FONT_CHOICES.map((f) => (
-                <option key={f.label} value={f.value}>
-                  {f.label}
+              <option value={SYSTEM_FONT}>系统默认</option>
+              {fonts.map((f) => (
+                <option key={f} value={f}>
+                  {f}
                 </option>
               ))}
+              {/* 当前值不在系统列表里（老配置存的是整段 CSS 栈、或字体被卸了）就补一项，别让下拉显示成别的字体 */}
+              {value.fontFamily !== SYSTEM_FONT && !fonts.includes(value.fontFamily) ? (
+                <option value={value.fontFamily}>{value.fontFamily}</option>
+              ) : null}
               <option value={CUSTOM}>自己填…</option>
             </select>
           </label>
@@ -114,7 +132,7 @@ export default function Appearance({ onClose }: { onClose: () => void }) {
         </div>
         <div
           className="appearance-sample"
-          style={{ fontFamily: value.fontFamily }}
+          style={{ fontFamily: fontCss(value.fontFamily) }}
           title="这块就是当前字体"
         >
           交周报 10:00 · 提前 5 分钟 · 今天 4 条
@@ -158,21 +176,45 @@ export default function Appearance({ onClose }: { onClose: () => void }) {
           <label className="wide">
             字体
             <select
-              value={value.floatFontFamily ?? FOLLOW}
-              onChange={(e) =>
+              value={floatCustom ? CUSTOM : (value.floatFontFamily ?? FOLLOW)}
+              onChange={(e) => {
+                if (e.target.value === CUSTOM) {
+                  setFloatCustom(true);
+                  return;
+                }
+                setFloatCustom(false);
                 update({
                   floatFontFamily: e.target.value === FOLLOW ? null : e.target.value,
-                })
-              }
+                });
+              }}
             >
               <option value={FOLLOW}>跟主窗口一样</option>
-              {FONT_CHOICES.map((f) => (
-                <option key={f.label} value={f.value}>
-                  {f.label}
+              {fonts.map((f) => (
+                <option key={f} value={f}>
+                  {f}
                 </option>
               ))}
+              {value.floatFontFamily !== null && !fonts.includes(value.floatFontFamily) ? (
+                <option value={value.floatFontFamily}>{value.floatFontFamily}</option>
+              ) : null}
+              <option value={CUSTOM}>自己填…</option>
             </select>
           </label>
+          {floatCustom ? (
+            <label className="wide">
+              字体名
+              <input
+                value={value.floatFontFamily ?? ""}
+                placeholder="留空 = 跟主窗口一样"
+                onChange={(e) =>
+                  update({
+                    floatFontFamily:
+                      e.target.value.trim() === "" ? null : e.target.value,
+                  })
+                }
+              />
+            </label>
+          ) : null}
         </div>
         <div className="row">
           <span className="appearance-name">字号</span>

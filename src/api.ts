@@ -328,6 +328,33 @@ export type DingtalkChannelInput = {
 export const saveDingtalkChannel = (input: DingtalkChannelInput) =>
   invoke<number>("save_dingtalk_channel", { input });
 
+// ---------- M6：WxPusher（微信推送）渠道 ----------
+
+/** WxPusher 的表单入参（后端 `commands::WxpusherChannelInput`） */
+export type WxpusherChannelInput = {
+  name?: string | null;
+  enabled: boolean;
+  priority?: number | null;
+  /** 一个或多个 UID（`UID_` 开头），中英文逗号 / 空格 / 换行分隔都行 */
+  uids: string;
+  /** appToken（`AT_` 开头）；**留空 = 不改动已存的密钥** */
+  app_token?: string | null;
+};
+
+export const saveWxpusherChannel = (input: WxpusherChannelInput) =>
+  invoke<number>("save_wxpusher_channel", { input });
+
+/** 把 WxPusher 渠道配置解析出来；**appToken 永远不会回传**，所以这里只有 UID 列表 */
+export function parseWxpusherConfig(c: Channel): { uids: string } | null {
+  try {
+    const raw = JSON.parse(c.config_json) as Record<string, unknown>;
+    if (!Array.isArray(raw.uids)) return { uids: "" };
+    return { uids: raw.uids.filter((u): u is string => typeof u === "string").join(", ") };
+  } catch {
+    return null;
+  }
+}
+
 /** 把某渠道设为主渠道（排到降级链最前），返回它新的 priority */
 export const setChannelPrimary = (id: number) => invoke<number>("set_channel_primary", { id });
 
@@ -371,10 +398,14 @@ export function parseDingtalkConfig(c: Channel): { webhook: string } | null {
   }
 }
 
+/** 本机已安装的字体名（后端读 Windows 注册表；读不到会落回一份常用的） */
+export const listFonts = () => invoke<string[]>("list_fonts");
+
 /** 渠道类型的中文名（界面用） */
 export const KIND_LABEL: Record<string, string> = {
   feishu: "飞书",
   dingtalk: "钉钉",
+  wxpusher: "微信推送",
 };
 
 /**

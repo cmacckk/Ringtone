@@ -9,9 +9,11 @@ import {
   listChannels,
   parseDingtalkConfig,
   parseFeishuConfig,
+  parseWxpusherConfig,
   recentLogs,
   saveDingtalkChannel,
   saveFeishuChannel,
+  saveWxpusherChannel,
   setChannelEnabled,
   setChannelPrimary,
   testChannel,
@@ -128,17 +130,22 @@ export default function Settings({
   // 钉钉表单
   const [webhook, setWebhook] = useState("");
   const [signSecret, setSignSecret] = useState("");
+  // WxPusher（微信推送）表单
+  const [appToken, setAppToken] = useState("");
+  const [uids, setUids] = useState("");
 
   const feishu = channels.find((c) => c.kind === "feishu") ?? null;
   const dingtalk = channels.find((c) => c.kind === "dingtalk") ?? null;
+  const wxpusher = channels.find((c) => c.kind === "wxpusher") ?? null;
   // 主渠道 = 启用中的、priority 最小的那个（与后端降级链同一条规则）
   const primaryId =
     channels.filter((c) => c.enabled).sort((a, b) => a.priority - b.priority)[0]?.id ?? null;
 
   // 已经回填过的配置快照：避免每次「验证/测试」后刷新时把用户正在改的内容冲掉
-  const [applied, setApplied] = useState<{ feishu: string; dingtalk: string }>({
+  const [applied, setApplied] = useState<{ feishu: string; dingtalk: string; wxpusher: string }>({
     feishu: "",
     dingtalk: "",
+    wxpusher: "",
   });
 
   const refresh = useCallback(async () => {
@@ -160,6 +167,7 @@ export default function Settings({
   // 密钥不会回填：后端从不把密钥回传前端。
   const feishuConfig = feishu?.config_json ?? "";
   const dingtalkConfig = dingtalk?.config_json ?? "";
+  const wxpusherConfig = wxpusher?.config_json ?? "";
   useEffect(() => {
     if (!feishu || feishuConfig === applied.feishu) return;
     const cfg = parseFeishuConfig(feishu);
@@ -177,6 +185,14 @@ export default function Settings({
     setWebhook(cfg.webhook);
     setApplied((prev) => ({ ...prev, dingtalk: dingtalkConfig }));
   }, [dingtalk, dingtalkConfig, applied.dingtalk]);
+
+  useEffect(() => {
+    if (!wxpusher || wxpusherConfig === applied.wxpusher) return;
+    const cfg = parseWxpusherConfig(wxpusher);
+    if (!cfg) return;
+    setUids(cfg.uids);
+    setApplied((prev) => ({ ...prev, wxpusher: wxpusherConfig }));
+  }, [wxpusher, wxpusherConfig, applied.wxpusher]);
 
   async function run(fn: () => Promise<unknown>): Promise<void> {
     setBusy(true);
@@ -398,6 +414,80 @@ export default function Settings({
               onPrimary={primaryId === feishu.id}
             />
           ) : null}
+        </div>
+      </div>
+
+      <div className="card">
+        <div className="card-head">
+          <strong>微信推送（WxPusher）</strong>
+          {wxpusher ? (
+            <span className="muted">
+              {wxpusher.enabled ? "已启用" : "已停用"} ·{" "}
+              {wxpusher.secret_set ? "appToken 已存" : "appToken 未填"} · 今日已发{" "}
+              {wxpusher.quota_today ?? 0} 条
+            </span>
+          ) : (
+            <span className="muted">还没配置</span>
+          )}
+        </div>
+
+        <div className="form">
+          <label className="wide">
+            <span>UID（多个用逗号或空格隔开）</span>
+            <input
+              type="text"
+              value={uids}
+              placeholder="UID_xxxxxxxxxxxxxxxxx"
+              onChange={(e) => setUids(e.target.value)}
+            />
+          </label>
+          <label className="wide">
+            <span>appToken</span>
+            <input
+              type="password"
+              value={appToken}
+              placeholder={
+                wxpusher?.secret_set ? "留空 = 不改动已存的 appToken" : "AT_ 开头，第一次配置必填"
+              }
+              onChange={(e) => setAppToken(e.target.value)}
+            />
+          </label>
+        </div>
+
+        <div className="row">
+          <button
+            type="button"
+            className="primary"
+            disabled={busy || !uids.trim()}
+            onClick={() =>
+              void run(async () => {
+                await saveWxpusherChannel({
+                  name: "微信推送",
+                  enabled: true,
+                  priority: wxpusher?.priority ?? 100,
+                  uids: uids.trim(),
+                  // 空串 = 不改动已存的 appToken（第一次配置必须填，后端会拦）
+                  app_token: appToken.trim() === "" ? null : appToken.trim(),
+                });
+                setAppToken("");
+                return "已保存并启用";
+              })
+            }
+          >
+            保存并启用
+          </button>
+          {wxpusher ? (
+            <ChannelActions
+              channel={wxpusher}
+              busy={busy}
+              run={run}
+              onPrimary={primaryId === wxpusher.id}
+            />
+          ) : null}
+        </div>
+
+        <div className="hint">
+          先去 wxpusher.zjiecode.com 后台建应用拿到 appToken（AT_ 开头），再让接收人在 app / 公众号里关注该应用拿到 UID（UID_ 开头）。官方限制：接口 QPS ≤ 1、单个 UID 每天 2000 条，这里按 10 条/分 发。
         </div>
       </div>
 

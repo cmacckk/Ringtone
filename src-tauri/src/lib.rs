@@ -10,6 +10,7 @@ mod channel;
 mod commands;
 mod db;
 mod deliver;
+mod fonts;
 mod holiday;
 mod models;
 mod mouse;
@@ -171,6 +172,8 @@ pub fn run() {
             commands::list_channels,
             commands::save_feishu_channel,
             commands::save_dingtalk_channel,
+            commands::save_wxpusher_channel,
+            commands::list_fonts,
             commands::set_channel_enabled,
             commands::set_channel_primary,
             commands::delete_channel,

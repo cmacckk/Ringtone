@@ -6,6 +6,21 @@
 
 ### Added
 
+#### M6 · 微信推送（WxPusher）渠道 + 字体可选全部已安装字体
+
+- **新增第三个推送渠道：WxPusher（推到微信）**。`src-tauri/src/channel/wxpusher.rs`：
+  `POST https://wxpusher.zjiecode.com/api/send/message`，`contentType=1`（纯文本），
+  `content` 是渲染好的提醒文本，`summary` 取任务标题并按**字符**硬截 20（官方限 20，多一个就整条报错）。
+  设置 → 推送渠道多一张「微信推送（WxPusher）」卡（UID 多个可逗号/空格隔开，最多 20 个；appToken 写进 `credential_enc`、**永不回传前端**）。
+- 错误分类：HTTP 429 → 限流；408/5xx → 可重试；401/403 → 鉴权失败；文案含「频率 / 限流 / 超过」→ 限流；
+  业务码 `1002` → 鉴权失败、`1005` → 可重试、`1001` / 其他 → 参数错误（不重试，直接走降级链）。
+- 限流闸门：WxPusher 按 10 条/分（官方是接口 **QPS ≤ 1**，不是每分钟；提醒是稀疏事件，这个闸门够保守）。
+- **字体下拉改成「本机已安装的全部字体」**：新增 `src-tauri/src/fonts.rs` 读
+  `HKLM/HKCU\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Fonts`（手写 advapi32 FFI，**不引新依赖**，与 `mouse.rs` 同一套做法），
+  值名 `微软雅黑 & Microsoft YaHei & Microsoft YaHei UI (TrueType)` 按 `&` 拆、去后缀、丢 `@` 竖排字形，
+  结果 `OnceLock` 缓存、去重排序，读不到才回落 6 项常用（这台机器实测 **215 项**）。
+  新命令 `list_fonts`；存的是**单个字体家族名**，写 CSS 时由 `fontCss()` 补引号 + 系统栈回退（老配置里的整段栈原样用）。
+
 #### v0.1.0 已发布到 GitHub Release（含安装包）
 
 - **release 页**：https://github.com/cmacckk/Ringtone/releases/tag/v0.1.0
@@ -312,6 +327,10 @@
 
 ### Fixed
 
+- **字体列表静默回落到兜底那 6 项**：`RegEnumValueW` 给的数据区只有 4 字节，而字体表里的值都是字体文件名，
+  于是每次调用都返回 `ERROR_MORE_DATA (234)` —— 名字其实已经取到了，代码却把 234 当失败跳过，最后字体列表是空的
+  （而原来的测试只断言“非空”，兜底列表让它照样绿）。修法：数据区传 `null`（只要名字），并把 234 当成功；
+  另加一条 `reads_real_fonts_from_registry` 测试（要求 > 20 项）拦住“静默回落”。
 - `scripts/publish-release.ps1` 三处会踩的坑：① 原来写死 `target_commitish = "master"`，而远端仓库**没有**
   `master` 分支（默认分支是 `feat/autostart-range`）→ 新增 `-Target` 参数，留空时自动读仓库的 `default_branch`；
   ② 脚本存成 UTF-8 **没带 BOM**，Windows PowerShell 5.1 会按 GBK 读、中文串全乱（`pwsh` 7 才不在乎）→ 补 BOM；

@@ -53,14 +53,27 @@ export const APPEARANCE_DEFAULTS: Appearance = {
   taskColors: true,
 };
 
-/** 下拉里给几款常见中文字体（也可以自己填别的，见 `Appearance.tsx`） */
-export const FONT_CHOICES: Array<{ label: string; value: string }> = [
-  { label: "系统默认", value: SYSTEM_FONT },
-  { label: "微软雅黑", value: '"Microsoft YaHei", "微软雅黑", sans-serif' },
-  { label: "等线", value: '"DengXian", "等线", sans-serif' },
-  { label: "思源黑体", value: '"Source Han Sans SC", "思源黑体", sans-serif' },
-  { label: "宋体", value: 'SimSun, "宋体", serif' },
-  { label: "楷体", value: 'KaiTi, "楷体", serif' },
+/**
+ * 字体名 → CSS 的 `font-family` 值。
+ *
+ * 存下来的是**单个字体家族名**（如 `Microsoft YaHei`、`楷体`），写进 CSS 时补引号 +
+ * 系统栈做回退：字体被卸了也不至于变成浏览器默认的那种弱字体。
+ * 老配置里可能存的是整段栈（带逗号，如 `"Microsoft YaHei", sans-serif`）——那种原样用。
+ */
+export function fontCss(family: string): string {
+  const value = family.trim();
+  if (value === "" || value === SYSTEM_FONT || value.includes(",")) return value || SYSTEM_FONT;
+  return `"${value}", ${SYSTEM_FONT}`;
+}
+
+/** 读不到系统字体列表时的兜底（正常的全量列表来自后端 `list_fonts` 命令） */
+export const FONT_FALLBACK: string[] = [
+  "Microsoft YaHei",
+  "微软雅黑",
+  "DengXian",
+  "Source Han Sans SC",
+  "SimSun",
+  "KaiTi",
 ];
 
 function clamp(n: number, lo: number, hi: number): number {
@@ -144,7 +157,7 @@ export function applyAppearance(a: Appearance, which: "main" | "float" = "main")
   const scale = (isFloat ? a.floatFontScale : null) ?? a.fontScale;
   const family = (isFloat ? a.floatFontFamily : null) ?? a.fontFamily;
   root.style.setProperty("--fs-k", String(scale / APPEARANCE_DEFAULTS.fontScale));
-  root.style.setProperty("--font-family", family);
+  root.style.setProperty("--font-family", fontCss(family));
   root.style.setProperty(
     "--win-opacity",
     String(isFloat ? a.floatOpacity : a.winOpacity),

@@ -6,7 +6,7 @@
 
 **本地优先的定时提醒 + 多平台推送桌面应用**
 
-到点之后把提醒推到钉钉 / 飞书；关机不补发、发送失败会降级，数据只存在自己机器上。
+到点之后把提醒推到钉钉 / 飞书 / 微信（WxPusher）；关机不补发、发送失败会降级，数据只存在自己机器上。
 
 [![平台](https://img.shields.io/badge/%E5%B9%B3%E5%8F%B0-Windows%2010%2B-0078D6?style=flat-square)](https://github.com/cmacckk/Ringtone)
 [![Tauri](https://img.shields.io/badge/Tauri-2-24C8DB?style=flat-square&logo=tauri&logoColor=white)](https://tauri.app)
@@ -24,12 +24,12 @@
 ## ✨ 功能
 
 - 🗓 **按天规划，离线可用** —— 460×720 窄竖窗，一周一条周条 + 卡片列表；SQLite 存在本机，不用登录、断网照常用。
-- ⏰ **到点真的会提醒你** —— 到点把「时间 + 标题 + 备注」推到**钉钉 / 飞书**；主渠道发失败自动降级到下一个渠道，全挂了用本机系统通知兜底，并留一条失败记录。
+- ⏰ **到点真的会提醒你** —— 到点把「时间 + 标题 + 备注」推到**钉钉 / 飞书 / 微信（WxPusher）**；主渠道发失败自动降级到下一个渠道，全挂了用本机系统通知兜底，并留一条失败记录。
 - 🔁 **重复规则** —— 每天 / 工作日 / 每周（可多选星期几）/ 每月 / 每月最后工作日 / 每年，支持「**从 2026-10-13 重复到 2026-10-15**」这样的日期区间，起始日随时能改。
 - 🇨🇳 **认中国节假日** —— 「工作日」与「每月最后工作日」内置 2026 年国务院安排：法定节假日不响、**调休补班的周六日照响**；「每月 31 日」在 2 月自动落到 28/29 日，不会整月不响。
 - ✍️ **中文快捷录入** —— 输入框里写 `明天九点交周报`、`每周一三五交周报`、`10/20 交报告`、`每月最后一个工作日 巡检机房`，实时显示识别结果，回车即成任务。
 - 🔔 **提前提醒** —— 准点 / 提前 1、5、10、30 分钟 / 1 小时 / 1 天。
-- 💬 **提醒渠道按任务选** —— 有的任务只想发钉钉、有的只想发飞书，逐条可设；只勾一个渠道时失败了就本地兜底，**不会偷偷发到另一个渠道**。
+- 💬 **提醒渠道按任务选** —— 有的任务只想发钉钉、有的只想发飞书、有的只想发微信，逐条可设；只勾一个渠道时失败了就本地兜底，**不会偷偷发到另一个渠道**。
 - 🪟 **贴边浮窗** —— 主窗口最小化后贴在屏幕边缘，鼠标移过去展开；浮窗里能直接勾完成、能拖动换边、字体字号透明度可单独调，永远在最前面。
 - ⚡ **一键叫浮窗** —— 全局快捷键（默认未设，示例 `Ctrl+Shift+X`）或**鼠标侧键**，在任何程序里都能按。
 - 🚀 **开机自启** —— 登录后直接待命在托盘里，主窗口不往桌面上弹，到点照样推。
@@ -206,7 +206,7 @@ Ringtone/
 │  ├─ src/db.rs                迁移（清单驱动）+ 任务/实例/渠道/队列/日志的读写
 │  ├─ src/scheduler.rs         到点调度（网格对齐 tick + 错过语义 + 幂等）
 │  ├─ src/deliver.rs           投递、退避重试、降级链、限流、本地兜底
-│  ├─ src/channel/             渠道实现（dingtalk.rs / feishu.rs + 错误分类）
+│  ├─ src/channel/             渠道实现（dingtalk.rs / feishu.rs / wxpusher.rs + 错误分类）
 │  ├─ src/work.rs              上下班提醒（隐藏任务）  src/holiday.rs 法定节假日
 │  ├─ src/port.rs              导入导出            src/background.rs 背景图
 │  ├─ src/mouse.rs             鼠标侧键钩子         src/models.rs / time.rs 校验
@@ -228,7 +228,7 @@ Ringtone/
 | M3 | 飞书渠道打通（自建应用 + 错误分类 + 失败兜底） | ✅ 完成 |
 | M4 | 钉钉渠道 + 投递队列 + 降级链 + 限流闸门 | ✅ 完成 |
 | M5 | 界面改造（kite 风格：自绘标题栏 + 信息块 + 周条 + 卡片列表，深/浅两套主题） | ✅ 完成 |
-| M6 | 打磨：重复规则、快捷录入、提醒渠道选择、主题 / 筛选 / 浮窗、外观设置、月总览、浮窗勾选、通用设置（快捷键 / 开机自启 / 导入导出 / 上下班提醒 / 背景图）、交互与观感第二批（右键菜单 / 重点 / 配色 / 鼠标侧键 / 多屏落点）、空白处右键菜单、节假日感知（工作日 / 月末对齐 / 每月最后工作日）、重复任务的日期区间（从哪天到哪天）、打包分发 | 🔄 进行中（上面列的都已 ✅，只剩安装包分发；密钥加密用户明确不做） |
+| M6 | 打磨：重复规则、快捷录入、提醒渠道选择、主题 / 筛选 / 浮窗、外观设置、月总览、浮窗勾选、通用设置（快捷键 / 开机自启 / 导入导出 / 上下班提醒 / 背景图）、交互与观感第二批（右键菜单 / 重点 / 配色 / 鼠标侧键 / 多屏落点）、空白处右键菜单、节假日感知（工作日 / 月末对齐 / 每月最后工作日）、重复任务的日期区间（从哪天到哪天）、微信推送（WxPusher）渠道、字体可选全部系统字体、打包分发 | 🔄 进行中（上面列的都已 ✅，只剩安装包分发；密钥加密用户明确不做） |
 
 核心链路（M1–M4）：
 
@@ -237,9 +237,9 @@ Ringtone/
 - 关窗不退出，驻留系统托盘（托盘菜单：显示主窗口 / 退出）；
 - 到点触发：**先发主渠道，失败按错误类型退避重试或换下一个渠道，全失败才用本机系统通知兜底**；
 - 投递走队列（`push_jobs`），退避重试不会拖住其它提醒，重启后也知道哪些没发完；
-- 限流闸门：钉钉 20 条/分、飞书 100 条/分，超限**推迟**而不是硬发（不给渠道封禁的机会）；
+- 限流闸门：钉钉 20 条/分、飞书 100 条/分、WxPusher 10 条/分，超限**推迟**而不是硬发（不给渠道封禁的机会）；
 - 失败可见：托盘换红点 + tooltip `Ringtone · N 条提醒发送失败`，界面右上角 `⚠ N 条没发出去`（点「知道了」清除）；
-- 渠道范围：**钉钉 + 飞书**（Server 酱免费版只显示标题、PushPlus 未实名额度为 0，都不做）。
+- 渠道范围：**钉钉 + 飞书 + 微信（WxPusher）**（Server 酱免费版只显示标题、PushPlus 未实名额度为 0，都不做）。
 
 ---
 
@@ -274,6 +274,30 @@ Ringtone/
   自建应用既能发群也能发单聊（`receive_id_type` 改成 `email` / `open_id` / `user_id`）。
 - 发单聊需要该用户能看到这个应用（需企业管理员授权范围），发群只需要机器人已在群里。
 - `app_secret` 只存在本机 SQLite，**不回传前端、不写日志**；界面只显示「密钥已存 / 未填」。
+
+## 配置推送渠道（微信 · WxPusher）
+
+[WxPusher](https://wxpusher.zjiecode.com/) 是把消息推到你**微信**里的中转服务（关注一个公众号就能收）。
+适合「不想把机器人拉进群、只想自己收到」的场景。
+
+1. 去 <https://wxpusher.zjiecode.com/> 用微信扫码登录，建一个应用，拿 **appToken**（`AT_` 开头）；
+2. 让接收人（你自己）用微信关注该应用的二维码，在「我的」里拿到 **UID**（`UID_` 开头）；
+3. 应用里点「设置 → 推送渠道 → 微信推送（WxPusher）」，填 UID 与 appToken，保存并启用；
+4. 点「发测试消息」，手机上应该收到一条 `【Ringtone 测试】`。
+
+发消息：`POST https://wxpusher.zjiecode.com/api/send/message`（`Content-Type: application/json`），
+请求体形如 `{"appToken":"AT_xxx","content":"...","summary":"...","contentType":1,"uids":["UID_xxx"]}`。
+
+几个容易踩的点：
+
+- **appToken 是密钥**（能往你的微信发消息），只存在本机 SQLite，不回传前端；界面上只显示「appToken 已存 / 未填」。
+  不公开 demo 里的那份必须是假的。
+- 能填**多个 UID**（逗号 / 空格隔开），最多 20 个；`summary` 官方限 20 个字符，超了会整条报错，Ringtone 会自动按字符截。
+- 官方限制：**接口 QPS ≤ 1**（所以这里按 10 条/分 发，提醒是稀疏事件够用）、单个 UID 每天 ≤ 2000 条。
+- 业务错误一律 `HTTP 200 + code`：`1000` 成功、`1002` appToken 无效、`1001` 通用业务错误
+  （实测 appToken 写错也回 `1001 appToken不正确`，所以别指望靠 code 区分，要看服务端的 `msg`）。
+- WxPusher **没有「只验证不发消息」的接口**，卡片的「检查配置」只做格式校验（`AT_` / `UID_` 前缀、数量），
+  真想确认只能点「发测试消息」。
 
 ## 推送失败时会怎么走（降级规则）
 
@@ -373,8 +397,9 @@ Ringtone/
 标题栏置顶按钮左边的 `Aa` 按钮，点开是一整屏的外观面板（返回待办的按钮在右上角）：
 
 - 面板分四块：**字体（主窗口）**、**字号（主窗口）**、**浮窗**、**主窗口透明度**。
-- **字体**：下拉里是六款常见中文字体（系统默认 / 微软雅黑 / 等线 / 思源黑体 / 宋体 / 楷体），
-  也能选「自定义」手填 `font-family`。字体要系统里装了才有用，没装会回退到系统默认。
+- **字体**：下拉里是**本机已安装的全部字体**（后端读 Windows 注册表的字体表，这台机器上 215 个；
+  按字母排序，也能选「自己填…」手写 `font-family`）。存的只是**字体家族名**（如 `KaiTi`），
+  写进 CSS 时自动补引号并叠一条系统字体做回退 —— 字体被卸了也不至于变成浏览器默认的那种弱字体。
 - **字号** 12~20 px（默认 14）。标题栏右边会实时显示当前 px。
 - **浮窗**那块是**自己一套**：字体下拉里有「跟主窗口一样」（默认，存 `null`）、字号滑条 + 一键「跟主窗口一样」、
   浮窗自己的透明度。浮窗比主窗口窄，字可以单独调小一点（实测浮窗调成 12px 时主窗口仍是 14px）。
@@ -577,7 +602,7 @@ RINGTONE_DATA_DIR="C:/.../rt-demo" WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS="--remo
 ## 文档
 
 - 完整方案 / 风险与取舍：`docs/kitealarm-plan.md`
-- 里程碑报告：`docs/M2-report.md`、`docs/M3-report.md`、`docs/M4-report.md`、`docs/M5-ui-report.md`、`docs/M6-repeat-report.md`、`docs/M6-advance-report.md`、`docs/M6-quick-report.md`、`docs/M6-channels-report.md`、`docs/M6-ui-report.md`、`docs/M6-appearance-report.md`、`docs/M6-overview-report.md`、`docs/M6-float-report.md`、`docs/M6-prefs-report.md`、`docs/M6-ui2-report.md`、`docs/M6-ctxmenu-report.md`、`docs/M6-package-report.md`、`docs/M6-autostart-range-report.md`
+- 里程碑报告：`docs/M2-report.md`、`docs/M3-report.md`、`docs/M4-report.md`、`docs/M5-ui-report.md`、`docs/M6-repeat-report.md`、`docs/M6-advance-report.md`、`docs/M6-quick-report.md`、`docs/M6-channels-report.md`、`docs/M6-ui-report.md`、`docs/M6-appearance-report.md`、`docs/M6-overview-report.md`、`docs/M6-float-report.md`、`docs/M6-prefs-report.md`、`docs/M6-ui2-report.md`、`docs/M6-ctxmenu-report.md`、`docs/M6-package-report.md`、`docs/M6-autostart-range-report.md`、`docs/M6-wxpusher-report.md`
 - 变更日志：`CHANGELOG.md`
 - 发版：`scripts/publish-release.ps1`（建 release + 上传安装包；用法见 `docs/M6-package-report.md` 第 5 节）
 

@@ -1,6 +1,7 @@
 //! 推送渠道层。
 //!
-//! 已接：钉钉（自定义机器人 webhook + 加签）、飞书（自建应用 `tenant_access_token` + `im/v1/messages`）。
+//! 已接：钉钉（自定义机器人 webhook + 加签）、飞书（自建应用 `tenant_access_token` + `im/v1/messages`）、
+//! WxPusher（微信推送，appToken + UID）。
 //!
 //! 三条设计约束：
 //! 1. 发送是**阻塞**的 —— 调度线程本身就是 OS 线程，同步调用最直白；
@@ -12,6 +13,7 @@
 
 pub mod dingtalk;
 pub mod feishu;
+pub mod wxpusher;
 
 use chrono::{Local, TimeZone};
 
@@ -102,16 +104,28 @@ pub fn send_via(rec: &ChannelRecord, msg: &OutboundMessage) -> SendOutcome {
             let client = dingtalk::DingtalkClient::new(cfg, rec.secret.clone())?;
             client.send_text(&render_text(msg))
         }
+        wxpusher::KIND => {
+            let cfg = wxpusher::WxpusherConfig::from_json(&rec.channel.config_json)?;
+            let token = rec
+                .secret
+                .as_deref()
+                .filter(|s| !s.trim().is_empty())
+                .ok_or_else(|| SendError::config("WxPusher 渠道还没填 appToken"))?;
+            let client = wxpusher::WxpusherClient::new(cfg, token.to_string())?;
+            client.send_text(&msg.title, &render_text(msg))
+        }
         other => Err(SendError::config(format!("暂不支持的渠道类型：{other}"))),
     }
 }
 
 /// 各渠道的每分钟发送上限（官方文档值）。
-/// 钉钉：20 条/分（超了限流 10 分钟）；飞书 `im/v1/messages`：官方 1000/分、50/秒，这里取保守的 100。
+/// 钉钉：20 条/分（超了限流 10 分钟）；飞书 `im/v1/messages`：官方 1000/分、50/秒，这里取保守的 100；
+/// WxPusher：官方 QPS ≤ 1（单 UID 每天 ≤ 2000），取 10 条/分。
 pub fn per_minute_limit(kind: &str) -> i64 {
     match kind {
         dingtalk::KIND => dingtalk::PER_MINUTE_LIMIT,
         feishu::KIND => 100,
+        wxpusher::KIND => wxpusher::PER_MINUTE_LIMIT,
         _ => 60,
     }
 }

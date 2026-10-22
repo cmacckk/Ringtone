@@ -8,7 +8,7 @@ use serde::{Deserialize, Serialize};
 use tauri::{AppHandle, State};
 use tauri_plugin_dialog::DialogExt;
 
-use crate::channel::{dingtalk, feishu};
+use crate::channel::{dingtalk, feishu, wxpusher};
 use crate::models::{Task, TaskInput};
 use crate::time;
 use crate::{background, db, deliver, port, work};
@@ -305,6 +305,73 @@ pub fn save_dingtalk_channel(
     .map_err(err)
 }
 
+/// WxPusher 的表单入参。`app_token` 是密钥 → 存 `credential_enc`；UID 列表不敏感 → 存 `config_json`。
+#[derive(Debug, Deserialize)]
+pub struct WxpusherChannelInput {
+    #[serde(default)]
+    pub name: Option<String>,
+    pub enabled: bool,
+    #[serde(default)]
+    pub priority: Option<i64>,
+    /// 一个或多个 UID，中英文逗号 / 空格 / 换行分隔都行
+    pub uids: String,
+    #[serde(default)]
+    pub app_token: Option<String>,
+}
+
+#[tauri::command]
+pub fn save_wxpusher_channel(
+    state: State<'_, AppState>,
+    input: WxpusherChannelInput,
+) -> Result<i64, String> {
+    let name = input
+        .name
+        .as_deref()
+        .map(str::trim)
+        .filter(|s| !s.is_empty())
+        .unwrap_or("微信推送")
+        .to_string();
+
+    let uids = wxpusher::parse_uids(&input.uids);
+    let raw = serde_json::json!({ "uids": uids }).to_string();
+    let cfg = wxpusher::WxpusherConfig::from_json(&raw).map_err(err)?;
+    let config_json = cfg.to_json();
+
+    let secret = input
+        .app_token
+        .as_deref()
+        .map(str::trim)
+        .filter(|s| !s.is_empty());
+
+    let conn = state.conn.lock().map_err(err)?;
+    // 首次配置必须给 appToken（留空只能用于「改其他字段、密钥不动」）
+    if secret.is_none() {
+        let has_secret = db::list_channels(&conn)
+            .map_err(err)?
+            .into_iter()
+            .any(|c| c.name == name && c.secret_set);
+        if !has_secret {
+            return Err("首次配置必须填写 appToken（AT_ 开头）".to_string());
+        }
+    }
+    db::upsert_channel(
+        &conn,
+        &name,
+        wxpusher::KIND,
+        input.enabled,
+        input.priority.unwrap_or(100),
+        &config_json,
+        secret,
+    )
+    .map_err(err)
+}
+
+/// 本机已安装的字体名（设置 → 外观的字体下拉用）。读的是 Windows 注册表，读不到就回落一份常用的。
+#[tauri::command]
+pub fn list_fonts() -> Vec<String> {
+    crate::fonts::list()
+}
+
 /// 设为主渠道：把自己的 `priority` 排到所有其他渠道前面（降级链从它开始试）。
 /// 返回生效后的 priority，方便前端直接回显。
 #[tauri::command]
@@ -411,6 +478,17 @@ pub fn verify_channel(state: State<'_, AppState>, id: i64) -> Result<String, Str
             // 钉钉机器人只有一个写接口，没有「只验证不发消息」的办法，不假装能验
             let cfg = dingtalk::DingtalkConfig::from_json(&rec.channel.config_json).map_err(err)?;
             let client = dingtalk::DingtalkClient::new(cfg, rec.secret.clone()).map_err(err)?;
+            client.verify().map_err(err)
+        }
+        wxpusher::KIND => {
+            // 同理：WxPusher 也没有只读的校验接口，只做静态校验并说明清楚
+            let cfg = wxpusher::WxpusherConfig::from_json(&rec.channel.config_json).map_err(err)?;
+            let token = rec
+                .secret
+                .clone()
+                .filter(|s| !s.trim().is_empty())
+                .ok_or_else(|| "该渠道还没填 appToken".to_string())?;
+            let client = wxpusher::WxpusherClient::new(cfg, token).map_err(err)?;
             client.verify().map_err(err)
         }
         other => Err(format!("暂不支持验证该渠道类型：{other}")),
