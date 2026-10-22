@@ -11,8 +11,8 @@
 [![平台](https://img.shields.io/badge/%E5%B9%B3%E5%8F%B0-Windows%2010%2B-0078D6?style=flat-square)](https://github.com/cmacckk/Ringtone)
 [![Tauri](https://img.shields.io/badge/Tauri-2-24C8DB?style=flat-square&logo=tauri&logoColor=white)](https://tauri.app)
 [![React](https://img.shields.io/badge/React-19-61DAFB?style=flat-square&logo=react&logoColor=black)](https://react.dev)
-[![版本](https://img.shields.io/badge/%E7%89%88%E6%9C%AC-0.1.0-blue?style=flat-square)](https://github.com/cmacckk/Ringtone)
-[![测试](https://img.shields.io/badge/cargo%20test-146%20passed-34c759?style=flat-square)](https://github.com/cmacckk/Ringtone)
+[![版本](https://img.shields.io/badge/%E7%89%88%E6%9C%AC-0.2.0-blue?style=flat-square)](https://github.com/cmacckk/Ringtone/releases)
+[![测试](https://img.shields.io/badge/cargo%20test-160%20passed-34c759?style=flat-square)](https://github.com/cmacckk/Ringtone)
 
 </div>
 
@@ -104,11 +104,11 @@
 
 **安装包（Windows 10 1803+ / Windows 11）**
 
-**[⬇ 下载 Ringtone_0.1.0_x64-setup.exe](https://github.com/cmacckk/Ringtone/releases/download/v0.1.0/Ringtone_0.1.0_x64-setup.exe)** · [releases 页面](https://github.com/cmacckk/Ringtone/releases)
+**[⬇ 下载 Ringtone_0.2.0_x64-setup.exe](https://github.com/cmacckk/Ringtone/releases/download/v0.2.0/Ringtone_0.2.0_x64-setup.exe)** · [releases 页面](https://github.com/cmacckk/Ringtone/releases)
 
 ```text
-Ringtone_0.1.0_x64-setup.exe        4.65 MiB（NSIS，当前用户安装，不需要管理员）
-SHA256  ec860b9606303aa15aa24ecfee0b2bca9913bfbeb5fdd8f8fd508cba26d77156
+Ringtone_0.2.0_x64-setup.exe        4.67 MiB（NSIS，当前用户安装，不需要管理员）
+SHA256  0dcaa5c1b78478685cc096545daa54d96b1a4e5b71ab919a6c0e9361415968b7
 ```
 
 - 依赖 **WebView2**：Win11 与较新的 Win10 自带；没有的话装一次微软的 Evergreen Runtime 即可。
@@ -228,7 +228,7 @@ Ringtone/
 | M3 | 飞书渠道打通（自建应用 + 错误分类 + 失败兜底） | ✅ 完成 |
 | M4 | 钉钉渠道 + 投递队列 + 降级链 + 限流闸门 | ✅ 完成 |
 | M5 | 界面改造（kite 风格：自绘标题栏 + 信息块 + 周条 + 卡片列表，深/浅两套主题） | ✅ 完成 |
-| M6 | 打磨：重复规则、快捷录入、提醒渠道选择、主题 / 筛选 / 浮窗、外观设置、月总览、浮窗勾选、通用设置（快捷键 / 开机自启 / 导入导出 / 上下班提醒 / 背景图）、交互与观感第二批（右键菜单 / 重点 / 配色 / 鼠标侧键 / 多屏落点）、空白处右键菜单、节假日感知（工作日 / 月末对齐 / 每月最后工作日）、重复任务的日期区间（从哪天到哪天）、微信推送（WxPusher）渠道、字体可选全部系统字体、打包分发 | 🔄 进行中（上面列的都已 ✅，只剩安装包分发；密钥加密用户明确不做） |
+| M6 | 打磨：重复规则、快捷录入、提醒渠道选择、主题 / 筛选 / 浮窗、外观设置、月总览、浮窗勾选、通用设置（快捷键 / 开机自启 / 导入导出 / 上下班提醒 / 背景图）、交互与观感第二批（右键菜单 / 重点 / 配色 / 鼠标侧键 / 多屏落点）、空白处右键菜单、节假日感知（工作日 / 月末对齐 / 每月最后工作日）、重复任务的日期区间（从哪天到哪天）、微信推送（WxPusher）渠道、字体可选全部系统字体、打包分发 | ✅ 完成（`v0.1.0` / `v0.2.0` 都已发 release；密钥加密用户明确不做，安装包暂不做签名） |
 
 核心链路（M1–M4）：
 

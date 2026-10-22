@@ -1,6 +1,6 @@
 [package]
 name = "ringtone"
-version = "0.1.0"
+version = "0.2.0"
 description = "Ringtone - 本地待办 + 到点推送到钉钉/飞书"
 authors = ["Mechrevo"]
 edition = "2021"

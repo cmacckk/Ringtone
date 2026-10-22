@@ -66,6 +66,23 @@
 登录用的是 Windows 凭据管理器里已有的那把 GitHub 凭据（`git credential fill` 取到，`gho_` 开头、
 scope 含 `repo`），没有让用户另给 token。
 
+### 4.2 v0.2.0（2026-10-22，当前最新）
+
+v0.1.0 之后又加了一整套东西（右键菜单 / 鼠标侧键 / 多屏落点 / 重点关注与配色 / 节假日感知 /
+重复任务日期区间 / 开机自启 / **微信推送 WxPusher** / **字体可选全部已安装字体**），
+所以按语义化版本升到 **0.2.0**，不覆写已发布的 v0.1.0 附件。
+
+| 项目 | 值 |
+| --- | --- |
+| release | https://github.com/cmacckk/Ringtone/releases/tag/v0.2.0（id `420362234`） |
+| 附件 | `Ringtone_0.2.0_x64-setup.exe` · **4,895,597 字节（4.67 MiB）** · `state=uploaded` |
+| SHA256 | `0dcaa5c1b78478685cc096545daa54d96b1a4e5b71ab919a6c0e9361415968b7` |
+| 下载直链 | https://github.com/cmacckk/Ringtone/releases/download/v0.2.0/Ringtone_0.2.0_x64-setup.exe（`HEAD` → 302 → 200，`Content-Length: 4895597`） |
+| `/releases/latest` | `v0.2.0` |
+
+版本号同时改了 `package.json` / `src-tauri/tauri.conf.json` / `src-tauri/Cargo.toml` 三处（漏一处就会出现
+「安装包叫 0.2.0、程序自报 0.1.0」）；README 的徽章、下载链接与 SHA256 已同步。
+
 ## 5. 推送与上传（已完成 / 仍需你做的部分）
 
 ```powershell

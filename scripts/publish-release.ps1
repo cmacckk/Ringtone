@@ -14,9 +14,9 @@
 param(
   [string]$Token = $env:GH_TOKEN,
   [string]$Repo = "cmacckk/Ringtone",
-  [string]$Tag = "v0.1.0",
+  [string]$Tag = "v0.2.0",
   [string]$Target = "",   # 空 = 用仓库的默认分支（别写死 master：仓库本地叫 master、远端可能叫别的）
-  [string]$Installer = "src-tauri\target\release\bundle\nsis\Ringtone_0.1.0_x64-setup.exe"
+  [string]$Installer = "src-tauri\target\release\bundle\nsis\Ringtone_0.2.0_x64-setup.exe"
 )
 
 $ErrorActionPreference = "Stop"
@@ -47,15 +47,17 @@ try {
     body             = @"
 本地优先的定时提醒 + 多平台推送桌面应用（Windows 10/11）。
 
-**下载** Ringtone_0.1.0_x64-setup.exe 双击安装（当前用户安装，不需要管理员；需要 WebView2，Win11 与较新的 Win10 已自带）。安装包没有代码签名，SmartScreen 拦一下 —— 点「更多信息」→「仍要运行」。
+下载 $($file.Name) 双击安装（当前用户安装，不需要管理员；需要 WebView2，Win11 与较新的 Win10 已自带）。安装包没有代码签名，SmartScreen 会拦一下：点「更多信息」→「仍要运行」。
+
+本次 **0.2.0** 新增：微信推送（WxPusher）渠道、字体可选全部已安装字体；另含 0.1.0 之后的交互与观感改动（右键菜单 / 鼠标侧键 / 多屏落点 / 重点关注与配色）、节假日感知、重复任务日期区间、开机自启、导入导出、月总览、贴边浮窗。
 
 **能干什么**
 
 - 按天规划待办，可重复（每天 / 工作日 / 每周 / 每月 / 每月最后工作日 / 每年，支持「从…重复到…」区间）
-- 到点把提醒推到**钉钉 / 飞书**；主渠道失败自动降级，全挂了用系统通知兜底
+- 到点把提醒推到**钉钉 / 飞书 / 微信（WxPusher）**；主渠道失败自动降级，全挂了用系统通知兜底
 - 「工作日」认中国法定节假日（法定节假日不响、调休补班的周末照响）
 - 中文快捷录入（例如：明天九点交周报）、多次提前提醒、按任务选推送渠道
-- 贴边浮窗（可勾完成 / 换边 / 独立字体字号）、全局快捷键与鼠标侧键、开机自启、上下班提醒
+- 贴边浮窗（可勾完成 / 换边 / 独立字体字号）、全局快捷键与鼠标侧键、开机自启、上下班提醒、字体可选全部已安装字体
 - 导入导出 Markdown / CSV、月总览、深/浅主题、背景图
 
 数据只存在本机 %APPDATA%\cn.ringtone.desktop（不用登录、不联网同步）。
